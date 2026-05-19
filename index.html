@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROST — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0d;
+    --surface: #0f1218;
+    --card: #141820;
+    --border: #1e2530;
+    --border2: #252d3a;
+    --gold: #d4a843;
+    --gold-dim: #a07c28;
+    --gold-glow: rgba(212,168,67,0.15);
+    --red: #e05555;
+    --green: #4caf7d;
+    --blue: #4a9eff;
+    --text: #dde2ec;
+    --muted: #5a6478;
+    --muted2: #8391a8;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, rgba(212,168,67,0.08) 0%, transparent 60%);
+  }
+  .login-box {
+    width: 360px; background: var(--card); border: 1px solid var(--border2);
+    border-radius: 20px; padding: 48px 40px; display: flex; flex-direction: column; gap: 24px;
+  }
+  .login-logo { font-family: var(--font-display); font-size: 52px; color: var(--gold); letter-spacing: 4px; line-height: 1; }
+  .login-sub { font-size: 12px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
+  .login-err { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--red); display: none; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-logo { font-family: var(--font-display); font-size: 28px; color: var(--gold); letter-spacing: 3px; }
+  .topbar-user { margin-left: auto; font-size: 13px; color: var(--muted2); }
+  .topbar-user span { color: var(--gold); font-weight: 600; }
+  .logout-btn { background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: 6px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: var(--font-body); }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .layout { display: flex; flex: 1; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 200px; background: var(--surface); border-right: 1px solid var(--border);
+    padding: 24px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+  }
+  .nav-label { font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 12px 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted2);
+    transition: all .15s; border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--card); color: var(--text); }
+  .nav-item.active { background: var(--gold-glow); color: var(--gold); border-color: rgba(212,168,67,0.2); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* ── MAIN ── */
+  .main { flex: 1; padding: 32px; overflow-y: auto; max-width: 1100px; }
+  .page { display: none; flex-direction: column; gap: 24px; }
+  .page.active { display: flex; }
+
+  .page-title { font-family: var(--font-display); font-size: 36px; color: var(--gold); letter-spacing: 2px; }
+  .page-sub { font-size: 13px; color: var(--muted2); margin-top: -16px; }
+
+  /* ── CARDS ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .card-title { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; }
+
+  /* ── STATS ROW ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat-value { font-family: var(--font-mono); font-size: 22px; font-weight: 500; margin-top: 6px; color: var(--gold); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.blue { color: var(--blue); }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .form-full { grid-column: 1 / -1; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .field input, .field select, .field textarea {
+    background: #0a0d12; border: 1px solid var(--border2); border-radius: 8px;
+    padding: 10px 12px; color: var(--text); font-size: 14px; font-family: var(--font-body);
+    outline: none; transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold-dim); }
+  .field textarea { resize: vertical; min-height: 100px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 700; font-family: var(--font-body); letter-spacing: 0.04em; transition: all .15s;
+  }
+  .btn-gold { background: var(--gold); color: #080a0d; }
+  .btn-gold:hover { background: #e8bc55; }
+  .btn-ghost { background: none; border: 1px solid var(--border2); color: var(--muted2); }
+  .btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .btn-danger { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3); color: var(--red); }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--surface); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 14px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-red { background: rgba(224,85,85,0.12); color: var(--red); }
+  .badge-green { background: rgba(76,175,125,0.12); color: var(--green); }
+
+  /* ── CHART ── */
+  .chart-wrap { position: relative; height: 200px; display: flex; align-items: flex-end; gap: 8px; padding-bottom: 28px; }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; transition: height .4s ease; }
+  .bar-seg { width: 100%; transition: height .4s; }
+  .bar-label { font-size: 9px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+  .bar-val { font-size: 9px; color: var(--muted2); font-family: var(--font-mono); }
+  .chart-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* ── PROST PARSER ── */
+  .parser-area { background: #0a0d12; border: 2px dashed var(--border2); border-radius: 12px; padding: 20px; }
+  .parser-area textarea { width: 100%; min-height: 160px; background: transparent; border: none; color: var(--muted2); font-size: 12px; font-family: var(--font-mono); resize: vertical; outline: none; }
+  .parsed-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 16px; }
+  .parsed-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; }
+  .parsed-item-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .parsed-item-value { font-family: var(--font-mono); font-size: 15px; color: var(--gold); margin-top: 4px; }
+
+  /* ── NOVEDADES ── */
+  .novedad-item { border-left: 3px solid var(--gold-dim); padding: 12px 16px; background: var(--surface); border-radius: 0 8px 8px 0; }
+  .novedad-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .novedad-text { font-size: 14px; line-height: 1.5; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--card);
+    border: 1px solid var(--border2); border-radius: 10px; padding: 14px 20px;
+    font-size: 14px; z-index: 9999; transform: translateY(80px); opacity: 0;
+    transition: all .3s; pointer-events: none; max-width: 300px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.ok { border-color: var(--green); color: var(--green); }
+  #toast.err { border-color: var(--red); color: var(--red); }
+
+  /* ── SPINNER ── */
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+
+  /* ── EMPLOYEE CHECKBOXES ── */
+  .emp-check {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    transition: all .15s; user-select: none;
+  }
+  .emp-check:hover { border-color: var(--gold-dim); }
+  .emp-check.selected { background: var(--gold-glow); border-color: var(--gold); color: var(--gold); }
+  .emp-check input[type=checkbox] { display: none; }
+  .emp-check-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); transition: background .15s; }
+  .emp-check.selected .emp-check-dot { background: var(--gold); }
+  .emp-role { font-size: 10px; color: var(--muted); margin-left: 2px; }
+  /* mobile */
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { padding: 16px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div>
+      <div class="login-logo">PROST</div>
+      <div class="login-sub">Panel de Administración</div>
+    </div>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="encargado1" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="login-err" id="login-err"></div>
+    <button class="btn btn-gold" id="login-btn" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">PROST</div>
+    <div class="topbar-user">Bienvenido, <span id="user-nombre"></span></div>
+    <button class="logout-btn" onclick="doLogout()">Salir</button>
+  </div>
+  <div class="layout">
+    <div class="sidebar" id="sidebar">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active" onclick="goTo('dashboard')"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item admin-only" onclick="goTo('prost')"><span class="nav-icon">📋</span> Informe PROST</div>
+      <div class="nav-label">Gestión</div>
+      <div class="nav-item admin-only" onclick="goTo('novedades')"><span class="nav-icon">📝</span> Novedades</div>
+      <div class="nav-item admin-only" onclick="goTo('compras')"><span class="nav-icon">🛒</span> Compras</div>
+      <div class="nav-item" onclick="goTo('deudas')"><span class="nav-icon">⚠️</span> Deudas</div>
+      <div class="nav-label admin-only">Config</div>
+      <div class="nav-item admin-only" onclick="goTo('empleados')"><span class="nav-icon">👥</span> Empleados</div>
+      <div class="nav-item" onclick="goTo('birra')"><span class="nav-icon">🍺</span> Stock Birra</div>
+    </div>
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-title">DASHBOARD</div>
+        <div class="page-sub" id="dash-mes-label">Cargando...</div>
+        <div class="row">
+          <div class="field" style="flex:0 0 auto">
+            <label>Mes</label>
+            <input type="month" id="dash-mes" onchange="loadDashboard()">
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDashboard()" style="margin-top:18px">Actualizar</button>
+        </div>
+        <div class="stats-row" id="dash-stats">
+          <div class="stat-card"><div class="stat-label">Total Ventas</div><div class="stat-value" id="d-ventas">—</div></div>
+          <div class="stat-card"><div class="stat-label">Salón</div><div class="stat-value green" id="d-salon">—</div></div>
+          <div class="stat-card"><div class="stat-label">Delivery</div><div class="stat-value blue" id="d-delivery">—</div></div>
+          <div class="stat-card"><div class="stat-label">Web</div><div class="stat-value" id="d-web">—</div></div>
+          <div class="stat-card"><div class="stat-label">Egresos</div><div class="stat-value red" id="d-egresos">—</div></div>
+          <div class="stat-card"><div class="stat-label">Factor Prom.</div><div class="stat-value" id="d-factor">—</div></div>
+          <div class="stat-card"><div class="stat-label">Deudas Pend.</div><div class="stat-value red" id="d-deudas">—</div></div>
+          <div class="stat-card"><div class="stat-label">Compras Mes</div><div class="stat-value" id="d-compras">—</div></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; flex-wrap:wrap">
+          <div class="card">
+            <div class="card-title">Ventas por canal — diario</div>
+            <div class="chart-wrap" id="chart-canales"></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#4caf7d"></div> Salón</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div> Delivery</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#d4a843"></div> Web</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Factor diario</div>
+            <div class="chart-wrap" id="chart-factor"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Últimas novedades</div>
+          <div id="dash-novedades" style="display:flex;flex-direction:column;gap:10px">
+            <div style="color:var(--muted);font-size:13px">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROST -->
+      <div class="page" id="page-prost">
+        <div class="page-title">INFORME PROST</div>
+        <div class="page-sub">Pegá el texto del informe diario y se extrae automáticamente</div>
+
+        <div class="card">
+          <div class="card-title">Pegar informe</div>
+          <div class="parser-area">
+            <textarea id="prost-raw" placeholder="Pegá aquí el texto completo del informe PROST..." oninput="parseProst()"></textarea>
+          </div>
+          <div id="parsed-preview" class="parsed-preview" style="display:none"></div>
+          <!-- EMPLEADOS DEL TURNO -->
+          <div id="empleados-turno-wrap" style="display:none; margin-top:20px">
+            <div class="card-title" style="margin-bottom:12px">¿Quiénes trabajaron este turno?</div>
+            <div id="empleados-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+          </div>
+
+          <div class="row" style="margin-top:16px; align-items:flex-end; flex-wrap:wrap; gap:16px">
+            <div class="field" style="flex:0 0 auto">
+              <label>Fecha del informe</label>
+              <input type="date" id="prost-fecha">
+            </div>
+            <div class="field" style="flex:0 0 auto">
+              <label>Factor calculado</label>
+              <div id="factor-display" style="background:#0a0d12;border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-family:var(--font-mono);font-size:18px;color:var(--gold);min-width:80px;text-align:center">—</div>
+            </div>
+            <button class="btn btn-gold" id="prost-save-btn" onclick="saveProst()" style="align-self:flex-end" disabled>Guardar informe</button>
+            <button class="btn btn-ghost" style="align-self:flex-end" onclick="limpiarProst()">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Historial de informes</div>
+          <div id="prost-table-wrap"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- NOVEDADES -->
+      <div class="page" id="page-novedades">
+        <div class="page-title">NOVEDADES</div>
+        <div class="page-sub">Registrá lo importante del turno</div>
+        <div class="card">
+          <div class="card-title">Nueva novedad</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Fecha</label>
+              <input type="date" id="nov-fecha">
+            </div>
+            <div class="field">
+              <label>Turno</label>
+              <select id="nov-turno">
+                <option>Noche</option>
+                <option>Tarde</option>
+                <option>Mediodía</option>
+              </select>
+            </div>
+            <div class="field form-full">
+              <label>Novedad</label>
+              <textarea id="nov-texto" placeholder="Describí lo que pasó durante el turno..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn btn-gold" onclick="saveNovedad()">Guardar novedad</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial</div>
+          <div id="novedades-list" style="display:flex;flex-direction:column;gap:10px">
+            <div style="color:var(--muted);font-size:13px">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPRAS -->
+      <div class="page" id="page-compras">
+        <div class="page-title">COMPRAS</div>
+        <div class="page-sub">Proveedores y gastos</div>
+        <div class="card">
+          <div class="card-title">Registrar compra</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Fecha</label>
+              <input type="date" id="comp-fecha">
+            </div>
+            <div class="field">
+              <label>Proveedor</label>
+              <input type="text" id="comp-proveedor" placeholder="Nombre del proveedor">
+            </div>
+            <div class="field">
+              <label>Concepto</label>
+              <input type="text" id="comp-concepto" placeholder="Ej: Ahumados, Almacén...">
+            </div>
+            <div class="field">
+              <label>Monto $</label>
+              <input type="number" id="comp-monto" placeholder="0">
+            </div>
+            <div class="field">
+              <label>Estado</label>
+              <select id="comp-pagado">
+                <option value="Si">Pagado</option>
+                <option value="No">Pendiente</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Notas</label>
+              <input type="text" id="comp-notas" placeholder="Opcional">
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn btn-gold" onclick="saveCompra()">Guardar compra</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial de compras</div>
+          <div id="compras-table-wrap"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- DEUDAS -->
+      <div class="page" id="page-deudas">
+        <div class="page-title">DEUDAS</div>
+        <div class="page-sub">Deudas informales con proveedores</div>
+        <div class="card admin-only">
+          <div class="card-title">Registrar deuda</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Fecha</label>
+              <input type="date" id="deu-fecha">
+            </div>
+            <div class="field">
+              <label>Acreedor</label>
+              <input type="text" id="deu-acreedor" placeholder="Nombre del proveedor">
+            </div>
+            <div class="field">
+              <label>Concepto</label>
+              <input type="text" id="deu-concepto" placeholder="¿Por qué se debe?">
+            </div>
+            <div class="field">
+              <label>Monto $</label>
+              <input type="number" id="deu-monto" placeholder="0">
+            </div>
+            <div class="field">
+              <label>Notas</label>
+              <input type="text" id="deu-notas" placeholder="Opcional">
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn btn-gold" onclick="saveDeuda()">Registrar deuda</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Deudas pendientes</div>
+          <div id="deudas-table-wrap"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+
+      <!-- BIRRA -->
+      <div class="page" id="page-birra">
+        <div class="page-title">STOCK BIRRA</div>
+        <div class="page-sub">Cargá los litros de cada estilo al cierre del turno</div>
+
+        <div class="card admin-only">
+          <div class="card-title">Cargar stock del turno</div>
+          <div class="field" style="max-width:200px; margin-bottom:20px">
+            <label>Fecha</label>
+            <input type="date" id="birra-fecha">
+          </div>
+          <div id="birra-form-estilos" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:12px"></div>
+          <div style="margin-top:20px">
+            <button class="btn btn-gold" onclick="saveBirra()">Guardar stock</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Último stock registrado</div>
+          <div id="birra-ultimo" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap:10px; margin-top:4px"></div>
+        </div>
+      </div>
+
+      <!-- EMPLEADOS -->
+      <div class="page" id="page-empleados">
+        <div class="page-title">EMPLEADOS</div>
+        <div class="card">
+          <div class="card-title">Agregar empleado</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Nombre</label>
+              <input type="text" id="emp-nombre" placeholder="Nombre completo">
+            </div>
+            <div class="field">
+              <label>Rol</label>
+              <select id="emp-rol">
+                <option>Mozo</option>
+                <option>Cocina</option>
+                <option>Bacha</option>
+                <option>Cadete</option>
+                <option>Encargado</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn btn-gold" onclick="saveEmpleado()">Agregar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Lista de empleados</div>
+          <div id="emp-list"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────
+const API = "https://script.google.com/macros/s/AKfycbwMpGYTcVDiL2zKOkUAyeqjVYOercMEi7iBkYArfIxKlyOGSQ-O0I9JTH3lrfimEJBD/exec";
+
+// ─── STATE ────────────────────────────────────────────────────
+let SESSION = null;
+let PARSED_DATA = null;
+
+// ─── API ──────────────────────────────────────────────────────
+async function api(action, data = {}) {
+  const body = { action, user: SESSION?.user, pass: SESSION?.pass, data };
+  const r = await fetch(API, { method: "POST", body: JSON.stringify(body) });
+  return r.json();
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById("login-user").value.trim();
+  const pass = document.getElementById("login-pass").value.trim();
+  const btn = document.getElementById("login-btn");
+  const err = document.getElementById("login-err");
+  if (!user || !pass) { showErr("Completá usuario y contraseña"); return; }
+  btn.innerHTML = '<span class="spinner"></span> Ingresando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(API, { method: "POST", body: JSON.stringify({ action: "login", user, pass }) });
+    const d = await res.json();
+    if (!d.ok) { showErr(d.error || "Error al ingresar"); btn.innerHTML = "Ingresar"; btn.disabled = false; return; }
+    SESSION = { user, pass, nombre: d.nombre, rol: d.rol };
+    localStorage.setItem("prost_session", JSON.stringify(SESSION));
+    startApp();
+  } catch(e) { showErr("Error de conexión"); btn.innerHTML = "Ingresar"; btn.disabled = false; }
+  function showErr(msg) { err.textContent = msg; err.style.display = "block"; }
+}
+
+function doLogout() {
+  SESSION = null;
+  localStorage.removeItem("prost_session");
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+}
+
+function startApp() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("user-nombre").textContent = SESSION.nombre;
+  // Hide admin-only elements for owners
+  if (SESSION.rol === "owner") {
+    document.querySelectorAll(".admin-only").forEach(el => el.style.display = "none");
+  }
+  // Set today's date on all date fields
+  const today = new Date().toISOString().slice(0, 10);
+  const todayMonth = today.slice(0, 7);
+  document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+  document.getElementById("dash-mes").value = todayMonth;
+  loadDashboard();
+  loadNovedades();
+  loadCompras();
+  loadDeudas();
+  loadEmpleados();
+  loadProstHistory();
+}
+
+// ─── NAV ──────────────────────────────────────────────────────
+function goTo(page) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById("page-" + page).classList.add("active");
+  event.currentTarget.classList.add("active");
+  if (page === "birra") { initBirraForm(); loadUltimoBirra(); }
+}
+
+// ─── FORMAT ───────────────────────────────────────────────────
+const fmt = n => typeof n === "number"
+  ? "$" + Math.round(n).toLocaleString("es-AR")
+  : (n || "—");
+
+// ─── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+  const mes = document.getElementById("dash-mes").value;
+  document.getElementById("dash-mes-label").textContent = "Cargando datos de " + mes + "...";
+  try {
+    const res = await api("getResumen", { mes });
+    if (!res.ok) { toast("Error al cargar dashboard", "err"); return; }
+    const r = res.resumen;
+    document.getElementById("d-ventas").textContent = fmt(r.totalVentas);
+    document.getElementById("d-salon").textContent = fmt(r.salonTotal);
+    document.getElementById("d-delivery").textContent = fmt(r.deliveryTotal);
+    document.getElementById("d-web").textContent = fmt(r.webTotal);
+    document.getElementById("d-egresos").textContent = fmt(r.totalEgresos);
+    document.getElementById("d-factor").textContent = r.factorProm || "—";
+    document.getElementById("d-deudas").textContent = fmt(r.totalDeudas);
+    document.getElementById("d-compras").textContent = fmt(r.totalCompras);
+    document.getElementById("dash-mes-label").textContent = "Resumen de " + mes;
+
+    renderCanalChart(res.prost || []);
+    renderFactorChart(res.prost || []);
+
+    // Novedades
+    const novRes = await api("getNovedades", { mes });
+    const novs = (novRes.data || []).slice(0, 5);
+    const novEl = document.getElementById("dash-novedades");
+    if (!novs.length) { novEl.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin novedades este mes</div>'; return; }
+    novEl.innerHTML = novs.map(n => `
+      <div class="novedad-item">
+        <div class="novedad-meta">${n.fecha} · ${n.turno} · <span style="color:var(--gold)">${n.usuario}</span></div>
+        <div class="novedad-text">${n.texto}</div>
+      </div>`).join("");
+  } catch(e) { toast("Error de conexión", "err"); }
+}
+
+// ─── CHARTS ───────────────────────────────────────────────────
+function renderCanalChart(data) {
+  const el = document.getElementById("chart-canales");
+  if (!data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px">Sin datos</div>'; return; }
+  const last = data.slice(-14);
+  const maxVal = Math.max(...last.map(d => (d.salon||0)+(d.delivery||0)+(d.web||0)), 1);
+  const H = 160;
+  el.innerHTML = last.map(d => {
+    const tot = (d.salon||0)+(d.delivery||0)+(d.web||0);
+    const h = Math.max(4, (tot / maxVal) * H);
+    const hs = Math.round((d.salon||0)/tot*h);
+    const hd = Math.round((d.delivery||0)/tot*h);
+    const hw = h - hs - hd;
+    const label = (d.fecha||"").slice(5);
+    return `<div class="bar-group">
+      <div class="bar-val">${tot>0?'$'+(Math.round(tot/1000))+'k':''}</div>
+      <div class="bar-stack" style="height:${h}px">
+        <div class="bar-seg" style="height:${hw}px;background:#d4a843"></div>
+        <div class="bar-seg" style="height:${hd}px;background:#4a9eff"></div>
+        <div class="bar-seg" style="height:${hs}px;background:#4caf7d"></div>
+      </div>
+      <div class="bar-label">${label}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderFactorChart(data) {
+  const el = document.getElementById("chart-factor");
+  if (!data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px">Sin datos</div>'; return; }
+  const last = data.slice(-14);
+  const maxVal = Math.max(...last.map(d => d.factor||0), 1);
+  const H = 160;
+  el.innerHTML = last.map(d => {
+    const h = Math.max(4, ((d.factor||0) / maxVal) * H);
+    const label = (d.fecha||"").slice(5);
+    return `<div class="bar-group">
+      <div class="bar-val">${d.factor||''}</div>
+      <div class="bar-stack" style="height:${h}px;background:var(--gold);opacity:0.7;border-radius:4px 4px 0 0"></div>
+      <div class="bar-label">${label}</div>
+    </div>`;
+  }).join("");
+}
+
+// ─── PROST PARSER ─────────────────────────────────────────────
+function parseProst() {
+  const raw = document.getElementById("prost-raw").value;
+  if (!raw.trim()) { clearParsed(); return; }
+
+  // Convierte "$300100" o "$ 300100" o "$ 300.100" a número
+  const toNum = (s) => s ? parseFloat(s.replace(/\./g, "").replace(",", "").replace(/\s/g,"")) : 0;
+
+  // ── VENTAS X TIPO ──
+  // Formato: "Delivery: $ 202800 / 10 / 10"  o  "Salon: $ 300100 / 7 / 18"
+  const salonM    = raw.match(/Salon:\s*\$\s*([\d.,]+)\s*\/\s*(\d+)\s*\/\s*(\d+)/i);
+  const deliveryM = raw.match(/Delivery:\s*\$\s*([\d.,]+)\s*\/\s*(\d+)\s*\/\s*(\d+)/i);
+  const webM      = raw.match(/Web:\s*\$\s*([\d.,]+)\s*\/\s*(\d+)\s*\/\s*(\d+)/i);
+
+  const salon    = salonM    ? toNum(salonM[1])    : 0;
+  const delivery = deliveryM ? toNum(deliveryM[1]) : 0;
+  const web      = webM      ? toNum(webM[1])      : 0;
+
+  // Proformas (pedidos) y comensales por canal
+  const proformasSalon    = salonM    ? parseInt(salonM[2])    : 0;
+  const proformasDelivery = deliveryM ? parseInt(deliveryM[2]) : 0;
+  const proformasWeb      = webM      ? parseInt(webM[2])      : 0;
+  const totalProformas    = proformasSalon + proformasDelivery + proformasWeb;
+
+  const comensalesSalon    = salonM    ? parseInt(salonM[3])    : 0;
+  const comensalesDelivery = deliveryM ? parseInt(deliveryM[3]) : 0;
+  const comensalesWeb      = webM      ? parseInt(webM[3])      : 0;
+  const comensales         = comensalesSalon + comensalesDelivery + comensalesWeb;
+
+  // Total real de ventas: línea "$ 578900 / .Total" dentro de VENTAS X TIPO
+  // Buscamos el bloque VENTAS X TIPO y tomamos el total de ahí
+  const ventasTotalM = raw.match(/VENTAS X TIPO[\s\S]*?\$\s*([\d.,]+)\s*\/\s*\.Total/i);
+  const total = ventasTotalM ? toNum(ventasTotalM[1]) : (salon + delivery + web);
+
+  // Factor = total proformas / comensales totales
+  const factor = comensales > 0 ? Math.round((totalProformas / comensales) * 10) / 10 : 0;
+
+  // ── FLUJO DE DINERO ──
+  // Efectivo: Cobranzas$ 578900 dentro del bloque mmosna
+  const efectivoM = raw.match(/Cobranzas\$\s*([\d.,]+)/i);
+  const efectivo  = efectivoM ? toNum(efectivoM[1]) : 0;
+
+  // Débito: transferencia en bloque "debito"
+  // Formato: "Transferencias$ 116500 / mmosna"
+  const debitoBlock = raw.match(/FLUJO DE DINERO: debito([\s\S]*?)FLUJO DE DINERO:/i);
+  const debitoM = debitoBlock ? debitoBlock[1].match(/Transferencias\$\s*([\d.,]+)/i) : null;
+  const debito  = debitoM ? toNum(debitoM[1]) : 0;
+
+  // Mercado Pago: transferencia en bloque "Mercado Libre"
+  const mpBlock = raw.match(/FLUJO DE DINERO: Mercado Libre([\s\S]*?)FLUJO DE DINERO:/i);
+  const mpM     = mpBlock ? mpBlock[1].match(/Transferencias\$\s*([\d.,]+)/i) : null;
+  const mp      = mpM ? toNum(mpM[1]) : 0;
+
+  // Egresos: suma de todos los egresos del bloque mmosna
+  // Formato: "Egresos$ -260900 / Proveedor:..."  — tomamos el primer número negativo
+  const egresosM = raw.match(/Egresos\$\s*-([\d.,]+)/i);
+  // También puede estar como "$ -260900 / .Total" dentro de egresos
+  const egresosTotal = raw.match(/\$\s*-([\d.,]+)\s*\/\s*\.Total/i);
+  const egresos = egresosM ? toNum(egresosM[1]) : (egresosTotal ? toNum(egresosTotal[1]) : 0);
+
+  // Facturas
+  const facturasM = raw.match(/Facturas\s+Cantidad:\s*(\d+)/i);
+  const facturas  = facturasM ? parseInt(facturasM[1]) : 0;
+
+  PARSED_DATA = { salon, delivery, web, total, comensales, factor, efectivo, debito, mercadopago: mp, egresos, facturas, _platos: totalProformas };
+
+  const preview = document.getElementById("parsed-preview");
+  preview.style.display = "grid";
+  preview.innerHTML = [
+    ["Salón", fmt(salon)],
+    ["Delivery", fmt(delivery)],
+    ["Web", fmt(web)],
+    ["Total ventas", fmt(total)],
+    ["Comensales", comensales],
+    ["Factor", factor],
+    ["Efectivo", fmt(efectivo)],
+    ["Débito", fmt(debito)],
+    ["Mercado Pago", fmt(mp)],
+    ["Egresos", fmt(egresos)],
+    ["Facturas", facturas],
+  ].map(([l,v]) => `<div class="parsed-item"><div class="parsed-item-label">${l}</div><div class="parsed-item-value">${v}</div></div>`).join("");
+
+  document.getElementById("prost-save-btn").disabled = false;
+  // Show employee checkboxes
+  renderEmpleadosCheckboxes();
+}
+
+function clearParsed() {
+  PARSED_DATA = null;
+  document.getElementById("parsed-preview").style.display = "none";
+  document.getElementById("prost-save-btn").disabled = true;
+  document.getElementById("factor-display").textContent = "—";
+}
+
+// Lista de empleados cargada al parsear
+let EMPLEADOS_LISTA = [];
+
+function recalcFactor() {
+  const checked = document.querySelectorAll(".emp-check.selected").length;
+  const platos = PARSED_DATA?._platos || 0;
+  const factor = checked > 0 && platos > 0 ? Math.round((platos / checked) * 10) / 10 : 0;
+  document.getElementById("factor-display").textContent = factor > 0 ? factor : "—";
+  if (PARSED_DATA) { PARSED_DATA.factor = factor; PARSED_DATA.staff = checked; }
+}
+
+function toggleEmp(el) {
+  el.classList.toggle("selected");
+  recalcFactor();
+}
+
+function limpiarProst() {
+  document.getElementById("prost-raw").value = "";
+  document.getElementById("empleados-turno-wrap").style.display = "none";
+  document.getElementById("empleados-checkboxes").innerHTML = "";
+  document.getElementById("factor-display").textContent = "—";
+  clearParsed();
+}
+
+async function renderEmpleadosCheckboxes() {
+  if (!EMPLEADOS_LISTA.length) {
+    const res = await api("getEmpleados");
+    EMPLEADOS_LISTA = res.data || [];
+  }
+  const wrap = document.getElementById("empleados-turno-wrap");
+  const box = document.getElementById("empleados-checkboxes");
+  if (!EMPLEADOS_LISTA.length) { wrap.style.display = "none"; return; }
+  box.innerHTML = EMPLEADOS_LISTA.map(e =>
+    `<div class="emp-check" onclick="toggleEmp(this)">
+      <div class="emp-check-dot"></div>
+      <span>${e.nombre}</span>
+      <span class="emp-role">${e.rol}</span>
+    </div>`
+  ).join("");
+  wrap.style.display = "block";
+}
+
+async function saveProst() {
+  if (!PARSED_DATA) return;
+  const fecha = document.getElementById("prost-fecha").value;
+  if (!fecha) { toast("Seleccioná la fecha del informe", "err"); return; }
+  const checked = document.querySelectorAll(".emp-check.selected");
+  if (!checked.length) { toast("Tildá al menos un empleado del turno", "err"); return; }
+  const empleados = Array.from(checked).map(el => el.querySelectorAll("span")[0].textContent.trim());
+  const staff = checked.length;
+  const platos = PARSED_DATA._platos || 0;
+  PARSED_DATA.factor = staff > 0 && platos > 0 ? Math.round((platos / staff) * 10) / 10 : 0;
+  PARSED_DATA.staff = staff;
+  PARSED_DATA.empleados = empleados;
+  const btn = document.getElementById("prost-save-btn");
+  btn.disabled = true; btn.textContent = "Guardando...";
+  try {
+    const res = await api("saveProst", { ...PARSED_DATA, fecha });
+    if (res.ok) {
+      toast("Informe PROST guardado ✓", "ok");
+      limpiarProst();
+      loadProstHistory();
+      loadDashboard();
+    } else { toast(res.error || "Error", "err"); }
+  } catch(e) { toast("Error de conexión", "err"); }
+  btn.disabled = false; btn.textContent = "Guardar informe";
+}
+
+async function loadProstHistory() {
+  const res = await api("getProst", {});
+  const wrap = document.getElementById("prost-table-wrap");
+  if (!res.ok || !res.data?.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin informes cargados</div>'; return; }
+  const rows = res.data.slice().reverse();
+  wrap.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Salón</th><th>Delivery</th><th>Web</th><th>Total</th><th>Comensales</th><th>Factor</th><th>Egresos</th></tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td>${r.fecha}</td><td>${fmt(r.salon)}</td><td>${fmt(r.delivery)}</td><td>${fmt(r.web)}</td>
+      <td style="color:var(--gold);font-weight:600">${fmt(r.total)}</td>
+      <td>${r.comensales}</td><td style="color:var(--gold)">${r.factor}</td><td style="color:var(--red)">${fmt(r.egresos)}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+
+// ─── BIRRA ────────────────────────────────────────────────────
+const ESTILOS_BIRRA = [
+  "Golden","Scottish Ale","P","Cream Ale","BBA","AAA","R_IPA",
+  "PILSEN LAGER","A_IPA","HONEY","Frambuesa","Neipa","Stout","PEAKY BLINDERS","Saison"
+];
+
+function initBirraForm() {
+  const wrap = document.getElementById("birra-form-estilos");
+  if (!wrap || wrap.children.length) return;
+  wrap.innerHTML = ESTILOS_BIRRA.map(e => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.04em">${e}</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="field" style="flex:1;margin:0">
+          <label>Chopera (L)</label>
+          <input type="number" id="birra-${e.replace(/\s/g,'_')}" placeholder="0" min="0" step="0.5"
+            style="text-align:center;width:100%" oninput="updateBirraColor(this)">
+        </div>
+        <div class="field" style="flex:1;margin:0">
+          <label>Backup (u)</label>
+          <input type="number" id="backup-${e.replace(/\s/g,'_')}" placeholder="0" min="0" step="1"
+            style="text-align:center;width:100%">
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function updateBirraColor(el) {
+  const v = parseFloat(el.value) || 0;
+  el.style.borderColor = v === 0 ? "var(--red)" : v < 10 ? "#f0a030" : "var(--border2)";
+  el.style.color = v === 0 ? "var(--red)" : v < 10 ? "#f0a030" : "var(--text)";
+}
+
+async function saveBirra() {
+  const fecha = document.getElementById("birra-fecha").value;
+  if (!fecha) { toast("Seleccioná la fecha", "err"); return; }
+  const estilos = ESTILOS_BIRRA.map(e => ({
+    estilo: e,
+    litros: parseFloat(document.getElementById("birra-"+e.replace(/\s/g,"_"))?.value) || 0,
+    backup: parseInt(document.getElementById("backup-"+e.replace(/\s/g,"_"))?.value) || 0,
+  }));
+  const res = await api("saveBirra", { fecha, estilos });
+  if (res.ok) { toast("Stock birra guardado ✓", "ok"); loadUltimoBirra(); }
+  else toast(res.error || "Error", "err");
+}
+
+async function loadUltimoBirra() {
+  const res = await api("getUltimoBirra");
+  const el = document.getElementById("birra-ultimo");
+  if (!res.ok || !res.data?.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin stock registrado</div>';
+    return;
+  }
+  el.innerHTML = res.data.map(r => {
+    const color = r.litros === 0 ? "var(--red)" : r.litros < 10 ? "#f0a030" : "var(--green)";
+    const icon = r.litros === 0 ? "🔴" : r.litros < 10 ? "🟡" : "🟢";
+    return `<div style="background:var(--surface);border:1px solid ${r.litros < 10 ? color : "var(--border)"};border-radius:10px;padding:12px 16px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">${r.estilo}</div>
+      <div style="font-family:var(--font-mono);font-size:20px;color:${color};margin-top:4px">${r.litros}L ${icon}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px">Backup: <span style="color:var(--text);font-weight:600">${r.backup||0} u</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${res.fecha}</div>
+    </div>`;
+  }).join("");
+}
+
+// ─── NOVEDADES ────────────────────────────────────────────────
+async function saveNovedad() {
+  const fecha = document.getElementById("nov-fecha").value;
+  const turno = document.getElementById("nov-turno").value;
+  const texto = document.getElementById("nov-texto").value.trim();
+  if (!texto) { toast("Escribí la novedad", "err"); return; }
+  const res = await api("saveNovedad", { fecha, turno, texto });
+  if (res.ok) { toast("Novedad guardada ✓", "ok"); document.getElementById("nov-texto").value = ""; loadNovedades(); }
+  else toast(res.error || "Error", "err");
+}
+
+async function loadNovedades() {
+  const res = await api("getNovedades", {});
+  const el = document.getElementById("novedades-list");
+  if (!res.ok || !res.data?.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin novedades</div>'; return; }
+  el.innerHTML = res.data.map(n => `
+    <div class="novedad-item">
+      <div class="novedad-meta">${n.fecha} · ${n.turno} · <span style="color:var(--gold)">${n.usuario}</span></div>
+      <div class="novedad-text">${n.texto}</div>
+    </div>`).join("");
+}
+
+// ─── COMPRAS ──────────────────────────────────────────────────
+async function saveCompra() {
+  const d = {
+    fecha: document.getElementById("comp-fecha").value,
+    proveedor: document.getElementById("comp-proveedor").value.trim(),
+    concepto: document.getElementById("comp-concepto").value.trim(),
+    monto: parseFloat(document.getElementById("comp-monto").value) || 0,
+    pagado: document.getElementById("comp-pagado").value,
+    notas: document.getElementById("comp-notas").value.trim(),
+  };
+  if (!d.proveedor || !d.monto) { toast("Completá proveedor y monto", "err"); return; }
+  const res = await api("saveCompra", d);
+  if (res.ok) { toast("Compra guardada ✓", "ok"); loadCompras(); }
+  else toast(res.error || "Error", "err");
+}
+
+async function loadCompras() {
+  const res = await api("getCompras");
+  const wrap = document.getElementById("compras-table-wrap");
+  if (!res.ok || !res.data?.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin compras registradas</div>'; return; }
+  const rows = res.data.slice().reverse();
+  wrap.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Monto</th><th>Estado</th><th>Usuario</th></tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td>${r.fecha}</td><td>${r.proveedor}</td><td>${r.concepto||'—'}</td>
+      <td style="font-family:var(--font-mono)">${fmt(r.monto)}</td>
+      <td><span class="badge ${r.pagado==='Si'?'badge-green':'badge-red'}">${r.pagado==='Si'?'Pagado':'Pendiente'}</span></td>
+      <td style="color:var(--muted2)">${r.usuario}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ─── DEUDAS ───────────────────────────────────────────────────
+async function saveDeuda() {
+  const d = {
+    fecha: document.getElementById("deu-fecha").value,
+    acreedor: document.getElementById("deu-acreedor").value.trim(),
+    concepto: document.getElementById("deu-concepto").value.trim(),
+    monto: parseFloat(document.getElementById("deu-monto").value) || 0,
+    notas: document.getElementById("deu-notas").value.trim(),
+  };
+  if (!d.acreedor || !d.monto) { toast("Completá acreedor y monto", "err"); return; }
+  const res = await api("saveDeuda", d);
+  if (res.ok) { toast("Deuda registrada ✓", "ok"); loadDeudas(); }
+  else toast(res.error || "Error", "err");
+}
+
+async function pagarDeuda(fila, acreedor) {
+  if (!confirm(`¿Marcar deuda con ${acreedor} como pagada?`)) return;
+  const res = await api("pagarDeuda", { fila, fecha_pago: new Date().toISOString().slice(0,10) });
+  if (res.ok) { toast("Deuda pagada ✓", "ok"); loadDeudas(); }
+  else toast(res.error || "Error", "err");
+}
+
+async function loadDeudas() {
+  const res = await api("getDeudas");
+  const wrap = document.getElementById("deudas-table-wrap");
+  if (!res.ok || !res.data?.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin deudas registradas</div>'; return; }
+  const total = res.total_pendiente || 0;
+  wrap.innerHTML = `
+    <div style="margin-bottom:16px;padding:12px 16px;background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.2);border-radius:8px;display:flex;gap:16px">
+      <span style="font-size:13px;color:var(--muted2)">Total pendiente:</span>
+      <span style="font-family:var(--font-mono);color:var(--red);font-weight:600">${fmt(total)}</span>
+    </div>
+    <div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Acreedor</th><th>Concepto</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${res.data.map(r => `<tr>
+      <td>${r.fecha}</td><td>${r.acreedor}</td><td>${r.concepto}</td>
+      <td style="font-family:var(--font-mono);color:var(--red)">${fmt(r.monto)}</td>
+      <td><span class="badge ${r.estado==='Pagado'?'badge-green':'badge-red'}">${r.estado}</span></td>
+      <td>${r.estado==='Pendiente' && SESSION?.rol==='admin' ? `<button class="btn btn-ghost btn-sm" onclick="pagarDeuda(${r.id},'${r.acreedor}')">Marcar pagado</button>` : ''}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ─── EMPLEADOS ────────────────────────────────────────────────
+async function saveEmpleado() {
+  const nombre = document.getElementById("emp-nombre").value.trim();
+  const rol = document.getElementById("emp-rol").value;
+  if (!nombre) { toast("Ingresá el nombre", "err"); return; }
+  const res = await api("saveEmpleado", { nombre, rol });
+  if (res.ok) { toast("Empleado agregado ✓", "ok"); document.getElementById("emp-nombre").value = ""; loadEmpleados(); }
+  else toast(res.error || "Error", "err");
+}
+
+async function loadEmpleados() {
+  const res = await api("getEmpleados");
+  const el = document.getElementById("emp-list");
+  if (!res.ok || !res.data?.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">Sin empleados cargados</div>'; return; }
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Nombre</th><th>Rol</th></tr></thead>
+    <tbody>${res.data.map(e => `<tr><td>${e.nombre}</td><td style="color:var(--muted2)">${e.rol}</td></tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ─── TOAST ────────────────────────────────────────────────────
+function toast(msg, type = "ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show " + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = "", 3000);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+window.addEventListener("keydown", e => {
+  if (e.key === "Enter" && document.getElementById("login-screen").style.display !== "none") doLogin();
+});
+
+// Restore session
+const saved = localStorage.getItem("prost_session");
+if (saved) {
+  try {
+    SESSION = JSON.parse(saved);
+    startApp();
+  } catch(e) { localStorage.removeItem("prost_session"); }
+}
+</script>
+</body>
+</html>
