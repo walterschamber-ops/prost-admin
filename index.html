@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROST — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080a0d; --surface:#0f1218; --card:#141820; --border:#1e2530; --border2:#252d3a;
+  --gold:#d4a843; --gold-dim:#a07c28; --gold-glow:rgba(212,168,67,0.12);
+  --red:#e05555; --green:#4caf7d; --blue:#4a9eff; --purple:#9b7fe8;
+  --text:#dde2ec; --muted:#5a6478; --muted2:#8391a8;
+  --font-display:'Bebas Neue',sans-serif; --font-body:'DM Sans',sans-serif; --font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
+
+/* LOGIN */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,rgba(212,168,67,0.08) 0%,transparent 60%)}
+.login-box{width:360px;background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;display:flex;flex-direction:column;gap:24px}
+.login-logo{font-family:var(--font-display);font-size:52px;color:var(--gold);letter-spacing:4px;line-height:1}
+.login-sub{font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:-16px}
+.login-err{background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);display:none}
+
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh}
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:100}
+.topbar-logo{font-family:var(--font-display);font-size:28px;color:var(--gold);letter-spacing:3px}
+.topbar-user{margin-left:auto;font-size:13px;color:var(--muted2)}
+.topbar-user span{color:var(--gold);font-weight:600}
+.logout-btn{background:none;border:1px solid var(--border2);color:var(--muted);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:var(--font-body)}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+.layout{display:flex;flex:1}
+
+/* SIDEBAR */
+.sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);padding:24px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.nav-label{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding:8px 12px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted2);transition:all .15s;border:1px solid transparent}
+.nav-item:hover{background:var(--card);color:var(--text)}
+.nav-item.active{background:var(--gold-glow);color:var(--gold);border-color:rgba(212,168,67,.2)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+
+/* MAIN */
+.main{flex:1;padding:32px;overflow-y:auto;max-width:1200px}
+.page{display:none;flex-direction:column;gap:24px}
+.page.active{display:flex}
+.page-title{font-family:var(--font-display);font-size:36px;color:var(--gold);letter-spacing:2px}
+.page-sub{font-size:13px;color:var(--muted2);margin-top:-16px}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px}
+.card-title{font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:16px}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.stat-value{font-family:var(--font-mono);font-size:20px;font-weight:500;margin-top:6px;color:var(--gold)}
+.stat-value.green{color:var(--green)} .stat-value.red{color:var(--red)} .stat-value.blue{color:var(--blue)} .stat-value.purple{color:var(--purple)}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.form-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.field input,.field select,.field textarea{background:#0a0d12;border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold-dim)}
+.field textarea{resize:vertical;min-height:90px}
+
+/* BUTTONS */
+.btn{padding:10px 22px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--font-body);letter-spacing:.04em;transition:all .15s}
+.btn-gold{background:var(--gold);color:#080a0d} .btn-gold:hover{background:#e8bc55}
+.btn-ghost{background:none;border:1px solid var(--border2);color:var(--muted2)} .btn-ghost:hover{border-color:var(--gold-dim);color:var(--gold)}
+.btn-green{background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:var(--green)}
+.btn-red{background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);color:var(--red)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--surface);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-red{background:rgba(224,85,85,.12);color:var(--red)}
+.badge-green{background:rgba(76,175,125,.12);color:var(--green)}
+.badge-gold{background:rgba(212,168,67,.12);color:var(--gold)}
+
+/* CHART */
+.chart-wrap{position:relative;height:180px;display:flex;align-items:flex-end;gap:6px;padding-bottom:28px}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end}
+.bar-stack{width:100%;display:flex;flex-direction:column;justify-content:flex-end;border-radius:4px 4px 0 0;overflow:hidden}
+.bar-seg{width:100%}
+.bar-label{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center}
+.bar-val{font-size:9px;color:var(--muted2);font-family:var(--font-mono)}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2)}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+
+/* FACTOR CHART - line + dots */
+.factor-chart-wrap{position:relative;width:100%;height:180px;margin-top:8px}
+.factor-chart-wrap svg{width:100%;height:100%}
+
+/* EMPLOYEE CHIPS */
+.emp-check{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all .15s;user-select:none}
+.emp-check:hover{border-color:var(--gold-dim)}
+.emp-check.selected{background:var(--gold-glow);border-color:var(--gold);color:var(--gold)}
+.emp-check-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);transition:background .15s}
+.emp-check.selected .emp-check-dot{background:var(--gold)}
+.emp-role{font-size:10px;color:var(--muted);margin-left:2px}
+.emp-hours{width:50px;background:#0a0d12;border:1px solid var(--border2);border-radius:6px;padding:4px 6px;color:var(--text);font-size:12px;text-align:center;font-family:var(--font-mono)}
+
+/* SALDOS */
+.saldo-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center}
+.saldo-name{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.saldo-val{font-family:var(--font-mono);font-size:22px;font-weight:600;margin-top:6px}
+.saldo-val.pos{color:var(--green)} .saldo-val.neg{color:var(--red)}
+
+/* PARSER */
+.parser-area{background:#0a0d12;border:2px dashed var(--border2);border-radius:12px;padding:20px}
+.parser-area textarea{width:100%;min-height:140px;background:transparent;border:none;color:var(--muted2);font-size:12px;font-family:var(--font-mono);resize:vertical;outline:none}
+.parsed-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px}
+.parsed-item{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px 14px}
+.parsed-item-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.parsed-item-value{font-family:var(--font-mono);font-size:15px;color:var(--gold);margin-top:4px}
+
+/* NOVEDAD */
+.novedad-item{border-left:3px solid var(--gold-dim);padding:12px 16px;background:var(--surface);border-radius:0 8px 8px 0}
+.novedad-meta{font-size:11px;color:var(--muted);margin-bottom:6px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px 20px;font-size:14px;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:800px){.two-col{grid-template-columns:1fr}.sidebar{display:none}.main{padding:16px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div>
+      <div class="login-logo">PROST</div>
+      <div class="login-sub">Panel de Administración</div>
+    </div>
+    <div class="field"><label>Usuario</label><input type="text" id="login-user" placeholder="encargado1" autocomplete="username"></div>
+    <div class="field"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"></div>
+    <div class="login-err" id="login-err"></div>
+    <button class="btn btn-gold" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">PROST</div>
+    <div class="topbar-user">Bienvenido, <span id="user-nombre"></span></div>
+    <button class="logout-btn" onclick="doLogout()">Salir</button>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active" onclick="goTo('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item admin-only" onclick="goTo('prost',this)"><span class="nav-icon">📋</span> Informe PROST</div>
+      <div class="nav-label">Gestión</div>
+      <div class="nav-item admin-only" onclick="goTo('facturacion',this)"><span class="nav-icon">💰</span> Facturación</div>
+      <div class="nav-item admin-only" onclick="goTo('novedades',this)"><span class="nav-icon">📝</span> Novedades</div>
+      <div class="nav-item admin-only" onclick="goTo('compras',this)"><span class="nav-icon">🛒</span> Compras</div>
+      <div class="nav-item" onclick="goTo('birra_compras',this)"><span class="nav-icon">🍺</span> Birra / Deudas</div>
+      <div class="nav-item" onclick="goTo('birra_stock',this)"><span class="nav-icon">📦</span> Stock Birra</div>
+      <div class="nav-item" onclick="goTo('saldos',this)"><span class="nav-icon">🏦</span> Saldos</div>
+      <div class="nav-label admin-only">Config</div>
+      <div class="nav-item admin-only" onclick="goTo('empleados',this)"><span class="nav-icon">👥</span> Empleados</div>
+    </div>
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-title">DASHBOARD</div>
+        <div class="row" style="margin-bottom:4px">
+          <div class="field" style="flex:0 0 auto"><label>Mes</label><input type="month" id="dash-mes" onchange="loadDashboard()"></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDashboard()" style="margin-top:18px">↻ Actualizar</button>
+          <div id="dash-mes-label" style="font-size:13px;color:var(--muted2);margin-top:18px"></div>
+        </div>
+
+        <!-- Stats row 1: ventas -->
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">Total Ventas</div><div class="stat-value" id="d-ventas">—</div></div>
+          <div class="stat-card"><div class="stat-label">Salón</div><div class="stat-value green" id="d-salon">—</div></div>
+          <div class="stat-card"><div class="stat-label">Delivery</div><div class="stat-value blue" id="d-delivery">—</div></div>
+          <div class="stat-card"><div class="stat-label">Web</div><div class="stat-value" id="d-web">—</div></div>
+          <div class="stat-card"><div class="stat-label">Factor Mensual</div><div class="stat-value" id="d-factor">—</div></div>
+        </div>
+        <!-- Stats row 2: finanzas -->
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">Fact. Efectivo</div><div class="stat-value green" id="d-fac-ef">—</div></div>
+          <div class="stat-card"><div class="stat-label">Fact. Blanco</div><div class="stat-value blue" id="d-fac-bl">—</div></div>
+          <div class="stat-card"><div class="stat-label">Compras Blanco</div><div class="stat-value purple" id="d-comp-bl">—</div></div>
+          <div class="stat-card"><div class="stat-label">Egresos</div><div class="stat-value red" id="d-egresos">—</div></div>
+          <div class="stat-card"><div class="stat-label">Deudas Pend.</div><div class="stat-value red" id="d-deudas">—</div></div>
+        </div>
+
+        <!-- Saldos dueños -->
+        <div class="card">
+          <div class="card-title">Saldos dueños</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px" id="dash-saldos">
+            <div class="saldo-card"><div class="saldo-name">Esteban</div><div class="saldo-val" id="s-esteban">—</div></div>
+            <div class="saldo-card"><div class="saldo-name">Federico</div><div class="saldo-val" id="s-federico">—</div></div>
+            <div class="saldo-card"><div class="saldo-name">Guillermo</div><div class="saldo-val" id="s-guillermo">—</div></div>
+            <div class="saldo-card"><div class="saldo-name">Walter</div><div class="saldo-val" id="s-walter">—</div></div>
+          </div>
+        </div>
+
+        <!-- Birra baja -->
+        <div class="card">
+          <div class="card-title">⚠️ Birras con stock bajo (menos de 20L)</div>
+          <div id="dash-birra-baja" style="display:flex;flex-wrap:wrap;gap:10px"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+
+        <!-- Charts -->
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Ventas por canal — diario</div>
+            <div class="chart-wrap" id="chart-canales"></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#4caf7d"></div>Salón</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div>Delivery</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#d4a843"></div>Web</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Factor diario + acumulado</div>
+            <div class="factor-chart-wrap"><canvas id="chart-factor"></canvas></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#d4a843"></div>Diario</div>
+              <div class="legend-item"><div class="legend-dot" style="background:rgba(212,168,67,.4);border:2px dashed var(--gold)"></div>Acumulado</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Facturación chart -->
+        <div class="card">
+          <div class="card-title">Facturación diaria — efectivo vs blanco</div>
+          <div class="chart-wrap" id="chart-facturacion"></div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#4caf7d"></div>Efectivo</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div>Blanco</div>
+          </div>
+        </div>
+
+        <!-- Novedades -->
+        <div class="card">
+          <div class="card-title">Últimas novedades</div>
+          <div id="dash-novedades" style="display:flex;flex-direction:column;gap:10px"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- PROST -->
+      <div class="page" id="page-prost">
+        <div class="page-title">INFORME PROST</div>
+        <div class="page-sub">Pegá el texto del informe y se extrae automáticamente</div>
+        <div class="card">
+          <div class="card-title">Pegar informe</div>
+          <div class="parser-area"><textarea id="prost-raw" placeholder="Pegá aquí el texto completo del informe PROST..." oninput="parseProst()"></textarea></div>
+          <div id="parsed-preview" class="parsed-preview" style="display:none"></div>
+          <div id="empleados-turno-wrap" style="display:none;margin-top:20px">
+            <div class="card-title">¿Quiénes trabajaron este turno?</div>
+            <div id="empleados-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+          </div>
+          <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap;gap:16px">
+            <div class="field" style="flex:0 0 auto"><label>Fecha</label><input type="date" id="prost-fecha"></div>
+            <div class="field" style="flex:0 0 auto"><label>Factor calculado</label><div id="factor-display" style="background:#0a0d12;border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-family:var(--font-mono);font-size:18px;color:var(--gold);min-width:80px;text-align:center">—</div></div>
+            <button class="btn btn-gold" id="prost-save-btn" onclick="saveProst()" style="align-self:flex-end" disabled>Guardar informe</button>
+            <button class="btn btn-ghost" style="align-self:flex-end" onclick="limpiarProst()">Limpiar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial</div>
+          <div id="prost-table-wrap"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- FACTURACION -->
+      <div class="page" id="page-facturacion">
+        <div class="page-title">FACTURACIÓN</div>
+        <div class="page-sub">Registrá la facturación diaria en efectivo y en blanco</div>
+        <div class="card">
+          <div class="card-title">Cargar facturación</div>
+          <div class="form-grid">
+            <div class="field"><label>Fecha</label><input type="date" id="fac-fecha"></div>
+            <div class="field"><label>Efectivo $</label><input type="number" id="fac-efectivo" placeholder="0"></div>
+            <div class="field"><label>En Blanco $</label><input type="number" id="fac-blanco" placeholder="0"></div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-gold" onclick="saveFacturacion()">Guardar</button></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Acumulado del mes</div>
+            <div id="fac-acumulado">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--muted2)">Efectivo:</span><span id="fac-tot-ef" style="font-family:var(--font-mono);color:var(--green)">—</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--muted2)">Blanco:</span><span id="fac-tot-bl" style="font-family:var(--font-mono);color:var(--blue)">—</span></div>
+              <div style="height:1px;background:var(--border);margin:10px 0"></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2);font-weight:700">Total:</span><span id="fac-tot-total" style="font-family:var(--font-mono);color:var(--gold);font-size:18px">—</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Historial del mes</div>
+            <div id="fac-table-wrap"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOVEDADES -->
+      <div class="page" id="page-novedades">
+        <div class="page-title">NOVEDADES</div>
+        <div class="card">
+          <div class="card-title">Nueva novedad</div>
+          <div class="form-grid">
+            <div class="field"><label>Fecha</label><input type="date" id="nov-fecha"></div>
+            <div class="field"><label>Turno</label><select id="nov-turno"><option>Noche</option><option>Tarde</option><option>Mediodía</option></select></div>
+            <div class="field form-full"><label>Novedad</label><textarea id="nov-texto" placeholder="Describí lo que pasó..."></textarea></div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-gold" onclick="saveNovedad()">Guardar</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial</div>
+          <div id="novedades-list" style="display:flex;flex-direction:column;gap:10px"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- COMPRAS -->
+      <div class="page" id="page-compras">
+        <div class="page-title">COMPRAS</div>
+        <div class="card">
+          <div class="card-title">Registrar compra</div>
+          <div class="form-grid">
+            <div class="field"><label>Fecha</label><input type="date" id="comp-fecha"></div>
+            <div class="field"><label>Proveedor</label><input type="text" id="comp-proveedor" placeholder="Nombre"></div>
+            <div class="field"><label>Concepto</label><input type="text" id="comp-concepto" placeholder="Detalle"></div>
+            <div class="field"><label>Monto $</label><input type="number" id="comp-monto" placeholder="0"></div>
+            <div class="field"><label>Tipo</label><select id="comp-tipo"><option value="efectivo">Efectivo</option><option value="blanco">En Blanco</option></select></div>
+            <div class="field"><label>Estado</label><select id="comp-pagado"><option value="Si">Pagado</option><option value="No">Pendiente</option></select></div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-gold" onclick="saveCompra()">Guardar</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial — acumulado blanco: <span id="comp-acum-blanco" style="color:var(--blue);font-family:var(--font-mono)">—</span></div>
+          <div id="compras-table-wrap"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- BIRRA COMPRAS Y DEUDAS -->
+      <div class="page" id="page-birra_compras">
+        <div class="page-title">BIRRA / DEUDAS</div>
+
+        <!-- Tabs -->
+        <div class="row" style="gap:8px;margin-bottom:4px">
+          <button class="btn btn-gold btn-sm" onclick="showTab('tab-prov-birra')">Proveedores Birra</button>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('tab-pedidos-birra')">Pedidos Birra</button>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('tab-deudas')">Deudas Informales</button>
+        </div>
+
+        <!-- Tab: Proveedores Birra -->
+        <div id="tab-prov-birra">
+          <div class="card admin-only">
+            <div class="card-title">Agregar proveedor de birra</div>
+            <div class="form-grid">
+              <div class="field"><label>Nombre</label><input type="text" id="pb-nombre" placeholder="Ej: Guilliver"></div>
+              <div class="field"><label>Contacto</label><input type="text" id="pb-contacto" placeholder="Teléfono / email"></div>
+            </div>
+            <div style="margin-top:16px"><button class="btn btn-gold" onclick="saveProveedorBirra()">Agregar</button></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Proveedores</div>
+            <div id="prov-birra-list"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+          </div>
+        </div>
+
+        <!-- Tab: Pedidos Birra -->
+        <div id="tab-pedidos-birra" style="display:none">
+          <div class="card admin-only">
+            <div class="card-title">Registrar pedido</div>
+            <div class="form-grid">
+              <div class="field"><label>Fecha</label><input type="date" id="ped-fecha"></div>
+              <div class="field"><label>Proveedor</label><select id="ped-proveedor"><option value="">Seleccioná...</option></select></div>
+              <div class="field"><label>Concepto</label><input type="text" id="ped-concepto" placeholder="Detalle del pedido"></div>
+              <div class="field"><label>Monto total $</label><input type="number" id="ped-monto" placeholder="0"></div>
+            </div>
+            <div style="margin-top:16px"><button class="btn btn-gold" onclick="savePedidoBirra()">Registrar pedido</button></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Pedidos y estado de deuda</div>
+            <div id="pedidos-birra-list"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+          </div>
+          <!-- Pago parcial modal -->
+          <div class="card" id="pago-birra-form" style="display:none;border-color:var(--gold-dim)">
+            <div class="card-title">Registrar pago parcial</div>
+            <input type="hidden" id="pago-birra-pedido-id">
+            <div class="form-grid">
+              <div class="field"><label>Fecha</label><input type="date" id="pago-birra-fecha"></div>
+              <div class="field"><label>Monto $</label><input type="number" id="pago-birra-monto" placeholder="0"></div>
+              <div class="field"><label>Notas</label><input type="text" id="pago-birra-notas" placeholder="Opcional"></div>
+            </div>
+            <div class="row" style="margin-top:16px">
+              <button class="btn btn-green" onclick="savePagoBirra()">Confirmar pago</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('pago-birra-form').style.display='none'">Cancelar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Deudas Informales -->
+        <div id="tab-deudas" style="display:none">
+          <div class="card admin-only">
+            <div class="card-title">Agregar proveedor</div>
+            <div class="form-grid">
+              <div class="field"><label>Nombre</label><input type="text" id="dp-nombre" placeholder="Nombre del proveedor"></div>
+              <div class="field"><label>Contacto</label><input type="text" id="dp-contacto" placeholder="Opcional"></div>
+            </div>
+            <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="saveProveedor()">Agregar proveedor</button></div>
+          </div>
+          <div class="card admin-only">
+            <div class="card-title">Registrar deuda</div>
+            <div class="form-grid">
+              <div class="field"><label>Fecha</label><input type="date" id="deu-fecha"></div>
+              <div class="field"><label>Proveedor</label><select id="deu-proveedor"><option value="">Seleccioná...</option></select></div>
+              <div class="field"><label>Concepto</label><input type="text" id="deu-concepto" placeholder="Por qué se debe"></div>
+              <div class="field"><label>Monto total $</label><input type="number" id="deu-monto" placeholder="0"></div>
+            </div>
+            <div style="margin-top:16px"><button class="btn btn-gold" onclick="saveDeuda()">Registrar deuda</button></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Deudas — Total pendiente: <span id="deuda-total" style="color:var(--red);font-family:var(--font-mono)">—</span></div>
+            <div id="deudas-list"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+          </div>
+          <div class="card" id="pago-deuda-form" style="display:none;border-color:var(--gold-dim)">
+            <div class="card-title">Registrar pago parcial</div>
+            <input type="hidden" id="pago-deuda-id">
+            <div class="form-grid">
+              <div class="field"><label>Fecha</label><input type="date" id="pago-deuda-fecha"></div>
+              <div class="field"><label>Monto $</label><input type="number" id="pago-deuda-monto" placeholder="0"></div>
+              <div class="field"><label>Notas</label><input type="text" id="pago-deuda-notas" placeholder="Opcional"></div>
+            </div>
+            <div class="row" style="margin-top:16px">
+              <button class="btn btn-green" onclick="savePagoDeuda()">Confirmar pago</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('pago-deuda-form').style.display='none'">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STOCK BIRRA -->
+      <div class="page" id="page-birra_stock">
+        <div class="page-title">STOCK BIRRA</div>
+        <div class="page-sub">Litros en chopera y unidades en backup al cierre del turno</div>
+        <div class="card admin-only">
+          <div class="card-title">Actualizar stock</div>
+          <div class="field" style="max-width:200px;margin-bottom:20px"><label>Fecha</label><input type="date" id="birra-fecha"></div>
+          <div id="birra-form-estilos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
+          <div style="margin-top:20px"><button class="btn btn-gold" onclick="saveBirra()">Guardar stock</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Último stock registrado</div>
+          <div id="birra-ultimo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px"></div>
+        </div>
+      </div>
+
+      <!-- SALDOS DUEÑOS -->
+      <div class="page" id="page-saldos">
+        <div class="page-title">SALDOS DUEÑOS</div>
+        <div class="page-sub">Evolución de los saldos de Federico, Esteban, Guillermo y Walter</div>
+        <div class="row" style="margin-bottom:4px">
+          <div class="field" style="flex:0 0 auto"><label>Mes</label><input type="month" id="saldos-mes" onchange="loadSaldos()"></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadSaldos()" style="margin-top:18px">↻ Actualizar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px" id="saldos-cards">
+          <div class="saldo-card"><div class="saldo-name">Esteban</div><div class="saldo-val" id="sc-esteban">—</div></div>
+          <div class="saldo-card"><div class="saldo-name">Federico</div><div class="saldo-val" id="sc-federico">—</div></div>
+          <div class="saldo-card"><div class="saldo-name">Guillermo</div><div class="saldo-val" id="sc-guillermo">—</div></div>
+          <div class="saldo-card"><div class="saldo-name">Walter</div><div class="saldo-val" id="sc-walter">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Evolución de saldos</div>
+          <div class="factor-chart-wrap" style="height:220px"><canvas id="chart-saldos"></canvas></div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#4caf7d"></div>Esteban</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div>Federico</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#d4a843"></div>Guillermo</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#9b7fe8"></div>Walter</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historial de saldos</div>
+          <div id="saldos-table"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- EMPLEADOS -->
+      <div class="page" id="page-empleados">
+        <div class="page-title">EMPLEADOS</div>
+        <div class="card">
+          <div class="card-title">Agregar empleado</div>
+          <div class="form-grid">
+            <div class="field"><label>Nombre</label><input type="text" id="emp-nombre" placeholder="Nombre completo"></div>
+            <div class="field"><label>Rol</label><select id="emp-rol"><option>Mozo</option><option>Cocina</option><option>Bacha</option><option>Cadete</option><option>Encargado</option></select></div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-gold" onclick="saveEmpleado()">Agregar</button></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Lista de empleados</div>
+            <div id="emp-list"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Horas acumuladas este mes</div>
+            <div id="emp-horas-list"><div style="color:var(--muted);font-size:13px">Cargando...</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwMpGYTcVDiL2zKOkUAyeqjVYOercMEi7iBkYArfIxKlyOGSQ-O0I9JTH3lrfimEJBD/exec";
+let SESSION = null, PARSED_DATA = null, EMPLEADOS_LISTA = [];
+const today = () => new Date().toISOString().slice(0,10);
+const thisMonth = () => new Date().toISOString().slice(0,7);
+const fmt = n => typeof n==="number" ? "$"+Math.round(n).toLocaleString("es-AR") : (n||"—");
+const fmtK = n => typeof n==="number" ? (n>=1000000?"$"+(n/1000000).toFixed(1)+"M":"$"+(Math.round(n/1000))+"k") : "—";
+
+function api(action, data={}) {
+  return new Promise((resolve, reject) => {
+    const cbName = "cb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    const body = JSON.stringify({ action, user: SESSION?.user, pass: SESSION?.pass, data });
+    window[cbName] = function(res) {
+      delete window[cbName];
+      document.getElementById(cbName)?.remove();
+      resolve(res);
+    };
+    const script = document.createElement("script");
+    script.id = cbName;
+    script.src = API + "?callback=" + cbName + "&body=" + encodeURIComponent(body);
+    script.onerror = () => { delete window[cbName]; reject(new Error("Network error")); };
+    document.head.appendChild(script);
+    setTimeout(() => { delete window[cbName]; document.getElementById(cbName)?.remove(); reject(new Error("Timeout")); }, 30000);
+  });
+}
+
+// ── AUTH ─────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById("login-user").value.trim();
+  const pass = document.getElementById("login-pass").value.trim();
+  const err = document.getElementById("login-err");
+  if(!user||!pass){err.textContent="Completá usuario y contraseña";err.style.display="block";return;}
+  try {
+    SESSION={user,pass,nombre:"",rol:""};
+    const d = await api("login",{});
+    SESSION=null;
+    if(!d.ok){err.textContent=d.error||"Error";err.style.display="block";return;}
+    SESSION={user,pass,nombre:d.nombre,rol:d.rol};
+    localStorage.setItem("prost_session",JSON.stringify(SESSION));
+    startApp();
+  } catch(e){SESSION=null;err.textContent="Error de conexión";err.style.display="block";}
+}
+function doLogout(){SESSION=null;localStorage.removeItem("prost_session");document.getElementById("app").style.display="none";document.getElementById("login-screen").style.display="flex";}
+
+function startApp() {
+  document.getElementById("login-screen").style.display="none";
+  document.getElementById("app").style.display="flex";
+  document.getElementById("user-nombre").textContent=SESSION.nombre;
+  if(SESSION.rol==="owner") document.querySelectorAll(".admin-only").forEach(el=>el.style.display="none");
+  document.querySelectorAll('input[type="date"]').forEach(el=>el.value=today());
+  document.querySelectorAll('input[type="month"]').forEach(el=>el.value=thisMonth());
+  loadDashboard(); loadNovedades(); loadCompras(); loadEmpleados(); loadProstHistory();
+  loadFacturacion(); loadProveedoresBirra(); loadPedidosBirra(); loadProveedores(); loadDeudas();
+  loadBirraStock(); loadSaldos();
+}
+
+// ── NAV ──────────────────────────────────────────────────────
+function goTo(page, el) {
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  document.getElementById("page-"+page).classList.add("active");
+  if(el) el.classList.add("active");
+  if(page==="birra_stock"){initBirraForm();loadBirraStock();}
+  if(page==="saldos") loadSaldos();
+  if(page==="empleados") loadHorasEmpleados();
+}
+function showTab(id){
+  ["tab-prov-birra","tab-pedidos-birra","tab-deudas"].forEach(t=>{const el=document.getElementById(t);if(el)el.style.display="none";});
+  const el=document.getElementById(id);if(el)el.style.display="block";
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+  const mes = document.getElementById("dash-mes").value;
+  document.getElementById("dash-mes-label").textContent = "Cargando...";
+  try {
+    const res = await api("getResumen",{mes});
+    if(!res.ok){toast("Error al cargar","err");return;}
+    const r = res.resumen;
+    document.getElementById("d-ventas").textContent=fmt(r.totalVentas);
+    document.getElementById("d-salon").textContent=fmt(r.salonTotal);
+    document.getElementById("d-delivery").textContent=fmt(r.deliveryTotal);
+    document.getElementById("d-web").textContent=fmt(r.webTotal);
+    document.getElementById("d-factor").textContent=r.factorMensual||"—";
+    document.getElementById("d-fac-ef").textContent=fmt(r.facEfectivo);
+    document.getElementById("d-fac-bl").textContent=fmt(r.facBlanco);
+    document.getElementById("d-comp-bl").textContent=fmt(r.comprasBlanco);
+    document.getElementById("d-egresos").textContent=fmt(r.totalEgresos);
+    document.getElementById("d-deudas").textContent=fmt(r.totalDeudas);
+    document.getElementById("dash-mes-label").textContent="Resumen de "+mes;
+
+    // Saldos
+    ["esteban","federico","guillermo","walter"].forEach(n=>{
+      const v=r[n]||0; const el=document.getElementById("s-"+n);
+      el.textContent=fmt(v); el.className="saldo-val "+(v>=0?"pos":"neg");
+    });
+
+    renderCanalChart(res.prost||[]);
+    renderFactorChart(res.prost||[]);
+    renderFacturacionChart(res.facturacion||[]);
+
+    // Birra baja
+    const birraRes = await api("getUltimoBirra");
+    const baja = (birraRes.data||[]).filter(b=>b.litros<20);
+    const bEl = document.getElementById("dash-birra-baja");
+    if(!baja.length){bEl.innerHTML='<div style="color:var(--green);font-size:13px">✓ Todo el stock sobre 20L</div>';return;}
+    bEl.innerHTML = baja.map(b=>{
+      const c = b.litros===0?"var(--red)":b.litros<10?"#f0a030":"#e8bc55";
+      return `<div style="background:var(--surface);border:1px solid ${c};border-radius:10px;padding:10px 14px;min-width:120px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">${b.estilo}</div>
+        <div style="font-family:var(--font-mono);font-size:18px;color:${c};margin-top:2px">${b.litros}L</div>
+        ${b.backup>0?`<div style="font-size:11px;color:var(--muted2)">Backup: ${b.backup}u</div>`:''}
+      </div>`;
+    }).join("");
+
+    // Novedades
+    const nRes = await api("getNovedades",{mes});
+    const novs = (nRes.data||[]).slice(0,4);
+    const nEl = document.getElementById("dash-novedades");
+    nEl.innerHTML = novs.length ? novs.map(n=>`<div class="novedad-item"><div class="novedad-meta">${n.fecha} · ${n.turno} · <span style="color:var(--gold)">${n.usuario}</span></div><div>${n.texto}</div></div>`).join("") : '<div style="color:var(--muted);font-size:13px">Sin novedades</div>';
+  } catch(e){toast("Error de conexión","err");}
+}
+
+// ── CHARTS ───────────────────────────────────────────────────
+function renderCanalChart(data){
+  const el=document.getElementById("chart-canales");
+  if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px">Sin datos</div>';return;}
+  const last=data.slice(-15);
+  const maxVal=Math.max(...last.map(d=>(d.salon||0)+(d.delivery||0)+(d.web||0)),1);
+  const H=150;
+  el.innerHTML=last.map(d=>{
+    const tot=(d.salon||0)+(d.delivery||0)+(d.web||0);
+    const h=Math.max(4,(tot/maxVal)*H);
+    const hs=tot?Math.round((d.salon||0)/tot*h):0;
+    const hd=tot?Math.round((d.delivery||0)/tot*h):0;
+    const hw=h-hs-hd;
+    return `<div class="bar-group">
+      <div class="bar-val">${tot>0?fmtK(tot):''}</div>
+      <div class="bar-stack" style="height:${h}px">
+        <div class="bar-seg" style="height:${hw}px;background:#d4a843"></div>
+        <div class="bar-seg" style="height:${hd}px;background:#4a9eff"></div>
+        <div class="bar-seg" style="height:${hs}px;background:#4caf7d"></div>
+      </div>
+      <div class="bar-label">${(d.fecha||"").slice(5)}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderFactorChart(data){
+  const canvas=document.getElementById("chart-factor");
+  if(!data.length){return;}
+  const W=canvas.offsetWidth||400, H=180;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,W,H);
+  const factors=data.map(d=>d.factor||0);
+  // Acumulado
+  const acum=[]; let sumP=0,sumC=0;
+  data.forEach(d=>{sumP+=(d.platos||0);sumC+=(d.comensales||0);acum.push(sumC>0?Math.round(sumP/sumC*10)/10:0);});
+  const maxVal=Math.max(...factors,...acum,1);
+  const pad=30,padB=25;
+  const xStep=(W-pad*2)/(data.length-1||1);
+  const yScale=(H-padB-10)/maxVal;
+  // Bars (daily)
+  const barW=Math.max(2,xStep*0.5);
+  factors.forEach((v,i)=>{
+    const x=pad+i*xStep-barW/2;
+    const bH=v*yScale;
+    ctx.fillStyle="rgba(212,168,67,0.6)";
+    ctx.fillRect(x,H-padB-bH,barW,bH);
+    ctx.fillStyle="var(--gold)";
+    if(v>0){ctx.font="10px DM Mono,monospace";ctx.textAlign="center";ctx.fillText(v,pad+i*xStep,H-padB-bH-3);}
+  });
+  // Line (acumulado)
+  ctx.beginPath();
+  ctx.strokeStyle="rgba(212,168,67,0.9)";
+  ctx.lineWidth=2;
+  ctx.setLineDash([5,4]);
+  acum.forEach((v,i)=>{
+    const x=pad+i*xStep, y=H-padB-v*yScale;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Labels
+  ctx.fillStyle="#5a6478";
+  ctx.font="9px DM Sans,sans-serif";
+  data.forEach((d,i)=>{
+    if(i%2===0||data.length<=7){
+      ctx.textAlign="center";
+      ctx.fillText((d.fecha||"").slice(5),pad+i*xStep,H-5);
+    }
+  });
+}
+
+function renderFacturacionChart(data){
+  const el=document.getElementById("chart-facturacion");
+  if(!data.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px">Sin datos</div>';return;}
+  const last=data.slice(-15);
+  const maxVal=Math.max(...last.map(d=>(d.efectivo||0)+(d.blanco||0)),1);
+  const H=150;
+  el.innerHTML=last.map(d=>{
+    const tot=(d.efectivo||0)+(d.blanco||0);
+    const h=Math.max(4,(tot/maxVal)*H);
+    const hef=tot?Math.round((d.efectivo||0)/tot*h):0;
+    const hbl=h-hef;
+    return `<div class="bar-group">
+      <div class="bar-val">${tot>0?fmtK(tot):''}</div>
+      <div class="bar-stack" style="height:${h}px">
+        <div class="bar-seg" style="height:${hbl}px;background:#4a9eff"></div>
+        <div class="bar-seg" style="height:${hef}px;background:#4caf7d"></div>
+      </div>
+      <div class="bar-label">${(d.fecha||"").slice(5)}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderSaldosChart(data){
+  const canvas=document.getElementById("chart-saldos");
+  if(!data.length||!canvas) return;
+  const W=canvas.offsetWidth||600, H=220;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,W,H);
+  const keys=["esteban","federico","guillermo","walter"];
+  const colors=["#4caf7d","#4a9eff","#d4a843","#9b7fe8"];
+  const allVals=data.flatMap(d=>keys.map(k=>d[k]||0));
+  const minV=Math.min(...allVals,0), maxV=Math.max(...allVals,1);
+  const pad=40,padB=25;
+  const xStep=(W-pad*2)/(data.length-1||1);
+  const range=maxV-minV||1;
+  const toY=v=>pad+(H-padB-pad)*(1-(v-minV)/range);
+  // Zero line
+  const zy=toY(0);
+  ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,zy);ctx.lineTo(W-pad,zy);ctx.stroke();
+  // Lines
+  keys.forEach((k,ki)=>{
+    ctx.beginPath();ctx.strokeStyle=colors[ki];ctx.lineWidth=2;ctx.setLineDash([]);
+    data.forEach((d,i)=>{
+      const x=pad+i*xStep, y=toY(d[k]||0);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // Dots
+    data.forEach((d,i)=>{
+      ctx.beginPath();ctx.fillStyle=colors[ki];
+      ctx.arc(pad+i*xStep,toY(d[k]||0),3,0,Math.PI*2);ctx.fill();
+    });
+  });
+  // Labels
+  ctx.fillStyle="#5a6478";ctx.font="9px DM Sans,sans-serif";
+  data.forEach((d,i)=>{
+    if(i%2===0||data.length<=7){ctx.textAlign="center";ctx.fillText((d.fecha||"").slice(5),pad+i*xStep,H-5);}
+  });
+}
+
+// ── PROST PARSER ─────────────────────────────────────────────
+function parseProst(){
+  const raw=document.getElementById("prost-raw").value;
+  if(!raw.trim()){clearParsed();return;}
+  const toNum=s=>s?parseFloat(s.replace(/\./g,"").replace(",","").replace(/\s/g,"")):0;
+  // Para saldos el punto es decimal, no separador de miles
+  const toNumSaldo=s=>s?parseFloat(s.replace(/,/g,"").replace(/\s/g,"")):0;
+  const getInt=pattern=>{const m=raw.match(pattern);return m?parseInt(m[1]):0;};
+
+  const salonM=raw.match(/Salon:\s*\$\s*([\d.,]+)\s*\/\s*(\d+)\s*\/\s*(\d+)/i);
+  const deliveryM=raw.match(/Delivery:\s*\$\s*([\d.,]+)\s*\/\s*(\d+)\s*\/\s*(\d+)/i);
+  const webM=raw.match(/Web:\s*\$\s*([\d.,]+)\s*\/\s*(\d+)\s*\/\s*(\d+)/i);
+  const salon=salonM?toNum(salonM[1]):0;
+  const delivery=deliveryM?toNum(deliveryM[1]):0;
+  const web=webM?toNum(webM[1]):0;
+  const comensalesSalon=salonM?parseInt(salonM[3]):0;
+  const comensalesDelivery=deliveryM?parseInt(deliveryM[3]):0;
+  const comensalesWeb=webM?parseInt(webM[3]):0;
+  const comensales=comensalesSalon+comensalesDelivery+comensalesWeb;
+
+  const ventasTotalM=raw.match(/VENTAS X TIPO[\s\S]*?\$\s*([\d.,]+)\s*\/\s*\.Total/i);
+  const total=ventasTotalM?toNum(ventasTotalM[1]):(salon+delivery+web);
+
+  // Platos = Entradas + Especialidades + Promos
+  const entradas=getInt(/Entradas:\s*\$\s*[\d.,]+\s*\/\s*(\d+)/i);
+  const especialidades=getInt(/Especialidades:\s*\$\s*[\d.,]+\s*\/\s*(\d+)/i);
+  const promos=getInt(/Promos:\s*\$\s*[\d.,]+\s*\/\s*(\d+)/i);
+  const platos=entradas+especialidades+promos;
+
+  // Flujo dinero
+  const efectivoM=raw.match(/Cobranzas\$\s*([\d.,]+)/i);
+  const efectivo=efectivoM?toNum(efectivoM[1]):0;
+  const debitoBlock=raw.match(/FLUJO DE DINERO: debito([\s\S]*?)FLUJO DE DINERO:/i);
+  const debitoM=debitoBlock?debitoBlock[1].match(/Transferencias\$\s*([\d.,]+)/i):null;
+  const debito=debitoM?toNum(debitoM[1]):0;
+  const mpBlock=raw.match(/FLUJO DE DINERO: Mercado Libre([\s\S]*?)FLUJO DE DINERO:/i);
+  const mpM=mpBlock?mpBlock[1].match(/Transferencias\$\s*([\d.,]+)/i):null;
+  const mp=mpM?toNum(mpM[1]):0;
+  const egresosM=raw.match(/Egresos\$\s*-([\d.,]+)/i);
+  const egresos=egresosM?toNum(egresosM[1]):0;
+  const facturasM=raw.match(/Facturas\s+Cantidad:\s*(\d+)/i);
+  const facturas=facturasM?parseInt(facturasM[1]):0;
+
+  // Saldos dueños
+  const getSaldo=name=>{const m=raw.match(new RegExp("FLUJO DE DINERO: "+name+"[\\s\\S]*?Final\\$\\s*(-?[\\d.,]+)","i"));return m?toNum(m[1].replace("-","")):0;};
+  const signSaldo=name=>{
+    // Formato: "FLUJO DE DINERO: Esteban" ... "Final" ... "$ -6631437.74"
+    const block=raw.match(new RegExp("FLUJO DE DINERO:\s*"+name+"([\\s\\S]*?)(?:>>|SALDOS FINALES)","i"));
+    if(!block) return 0;
+    // Buscar "Final" seguido de "$ numero" con saltos de linea entre ellos
+    const fm=block[1].match(/\.Final[\s\S]{0,20}\$\s*(-?[\d.,]+)/i);
+    if(!fm) return 0;
+    const ns=fm[1].replace(/\s/g,"");
+    const val=toNumSaldo(ns.replace("-",""));
+    return ns.startsWith("-")?-val:val;
+  };
+  const f_esteban=signSaldo("Esteban");
+  const f_federico=signSaldo("Federico");
+  const f_guillermo=signSaldo("Guillermo");
+  const f_walter=signSaldo("Walter");
+
+  PARSED_DATA={salon,delivery,web,total,comensales,platos,factor:0,
+    efectivo,debito,mercadopago:mp,egresos,facturas,
+    f_esteban,f_federico,f_guillermo,f_walter,_platos:platos};
+
+  const preview=document.getElementById("parsed-preview");
+  preview.style.display="grid";
+  preview.innerHTML=[
+    ["Salón",fmt(salon)],["Delivery",fmt(delivery)],["Web",fmt(web)],
+    ["Total",fmt(total)],["Comensales",comensales],["Platos",platos],
+    ["Efectivo",fmt(efectivo)],["Débito",fmt(debito)],["MP",fmt(mp)],
+    ["Egresos",fmt(egresos)],["Facturas",facturas],
+    ["Esteban",fmt(f_esteban)],["Federico",fmt(f_federico)],
+    ["Guillermo",fmt(f_guillermo)],["Walter",fmt(f_walter)],
+  ].map(([l,v])=>`<div class="parsed-item"><div class="parsed-item-label">${l}</div><div class="parsed-item-value">${v}</div></div>`).join("");
+
+  document.getElementById("prost-save-btn").disabled=false;
+  renderEmpleadosCheckboxes();
+}
+
+function recalcFactor(){
+  const checked=document.querySelectorAll(".emp-check.selected").length;
+  const platos=PARSED_DATA?._platos||0;
+  const factor=checked>0&&platos>0?Math.round(platos/checked*10)/10:0;
+  document.getElementById("factor-display").textContent=factor>0?factor:"—";
+  if(PARSED_DATA){PARSED_DATA.factor=factor;PARSED_DATA.staff=checked;}
+}
+function toggleEmp(el){el.classList.toggle("selected");recalcFactor();}
+function clearParsed(){PARSED_DATA=null;const p=document.getElementById("parsed-preview");if(p)p.style.display="none";const b=document.getElementById("prost-save-btn");if(b)b.disabled=true;const fd=document.getElementById("factor-display");if(fd)fd.textContent="—";}
+function limpiarProst(){document.getElementById("prost-raw").value="";document.getElementById("empleados-turno-wrap").style.display="none";document.getElementById("empleados-checkboxes").innerHTML="";clearParsed();}
+
+async function renderEmpleadosCheckboxes(){
+  if(!EMPLEADOS_LISTA.length){const res=await api("getEmpleados");EMPLEADOS_LISTA=res.data||[];}
+  const wrap=document.getElementById("empleados-turno-wrap");
+  const box=document.getElementById("empleados-checkboxes");
+  if(!EMPLEADOS_LISTA.length){wrap.style.display="none";return;}
+  box.innerHTML=EMPLEADOS_LISTA.map(e=>
+    `<div class="emp-check" onclick="toggleEmp(this)">
+      <div class="emp-check-dot"></div>
+      <span>${e.nombre}</span>
+      <span class="emp-role">${e.rol}</span>
+    </div>`
+  ).join("");
+  wrap.style.display="block";
+}
+
+async function saveProst(){
+  if(!PARSED_DATA) return;
+  const fecha=document.getElementById("prost-fecha").value;
+  if(!fecha){toast("Seleccioná la fecha","err");return;}
+  const checked=document.querySelectorAll(".emp-check.selected");
+  if(!checked.length){toast("Tildá al menos un empleado","err");return;}
+  const empleados=Array.from(checked).map(el=>el.querySelectorAll("span")[0].textContent.trim());
+  const staff=checked.length;
+  const platos=PARSED_DATA._platos||0;
+  PARSED_DATA.factor=staff>0&&platos>0?Math.round(platos/staff*10)/10:0;
+  PARSED_DATA.staff=staff; PARSED_DATA.empleados=empleados;
+
+  // También guardar saldos del informe
+  const saldosData={fecha,esteban:PARSED_DATA.f_esteban,federico:PARSED_DATA.f_federico,guillermo:PARSED_DATA.f_guillermo,walter:PARSED_DATA.f_walter};
+
+  const btn=document.getElementById("prost-save-btn");
+  btn.disabled=true; btn.textContent="Guardando...";
+  try {
+    const res=await api("saveProst",{...PARSED_DATA,fecha});
+    if(res.ok){
+      await api("saveSaldos",saldosData);
+      toast("Informe PROST guardado ✓","ok");
+      limpiarProst(); loadProstHistory(); loadDashboard();
+    } else toast(res.error||"Error","err");
+  } catch(e){toast("Error de conexión","err");}
+  btn.disabled=false; btn.textContent="Guardar informe";
+}
+
+async function loadProstHistory(){
+  const res=await api("getProst",{});
+  const wrap=document.getElementById("prost-table-wrap");
+  if(!res.ok||!res.data?.length){wrap.innerHTML='<div style="color:var(--muted);font-size:13px">Sin informes</div>';return;}
+  wrap.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Salón</th><th>Delivery</th><th>Web</th><th>Total</th><th>Platos</th><th>Comen.</th><th>Factor</th><th>Egresos</th><th>Staff</th></tr></thead>
+    <tbody>${res.data.slice().reverse().map(r=>`<tr>
+      <td>${r.fecha}</td><td>${fmt(r.salon)}</td><td>${fmt(r.delivery)}</td><td>${fmt(r.web)}</td>
+      <td style="color:var(--gold);font-weight:600">${fmt(r.total)}</td>
+      <td>${r.platos}</td><td>${r.comensales}</td>
+      <td style="color:var(--gold)">${r.factor}</td>
+      <td style="color:var(--red)">${fmt(r.egresos)}</td><td>${r.staff}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ── FACTURACION ──────────────────────────────────────────────
+async function saveFacturacion(){
+  const d={fecha:document.getElementById("fac-fecha").value,efectivo:parseFloat(document.getElementById("fac-efectivo").value)||0,blanco:parseFloat(document.getElementById("fac-blanco").value)||0};
+  if(!d.fecha){toast("Seleccioná la fecha","err");return;}
+  const res=await api("saveFacturacion",d);
+  if(res.ok){toast("Facturación guardada ✓","ok");loadFacturacion();}
+  else toast(res.error||"Error","err");
+}
+async function loadFacturacion(){
+  const mes=thisMonth();
+  const res=await api("getFacturacion",{mes});
+  const rows=res.data||[];
+  const totEf=rows.reduce((s,r)=>s+(r.efectivo||0),0);
+  const totBl=rows.reduce((s,r)=>s+(r.blanco||0),0);
+  const ef=document.getElementById("fac-tot-ef"); if(ef)ef.textContent=fmt(totEf);
+  const bl=document.getElementById("fac-tot-bl"); if(bl)bl.textContent=fmt(totBl);
+  const tot=document.getElementById("fac-tot-total"); if(tot)tot.textContent=fmt(totEf+totBl);
+  const wrap=document.getElementById("fac-table-wrap");
+  if(!wrap) return;
+  if(!rows.length){wrap.innerHTML='<div style="color:var(--muted);font-size:13px">Sin registros</div>';return;}
+  wrap.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Efectivo</th><th>Blanco</th><th>Total</th></tr></thead>
+    <tbody>${rows.slice().reverse().map(r=>`<tr>
+      <td>${r.fecha}</td>
+      <td style="color:var(--green)">${fmt(r.efectivo)}</td>
+      <td style="color:var(--blue)">${fmt(r.blanco)}</td>
+      <td style="color:var(--gold);font-weight:600">${fmt((r.efectivo||0)+(r.blanco||0))}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ── NOVEDADES ────────────────────────────────────────────────
+async function saveNovedad(){
+  const texto=document.getElementById("nov-texto").value.trim();
+  if(!texto){toast("Escribí la novedad","err");return;}
+  const res=await api("saveNovedad",{fecha:document.getElementById("nov-fecha").value,turno:document.getElementById("nov-turno").value,texto});
+  if(res.ok){toast("Novedad guardada ✓","ok");document.getElementById("nov-texto").value="";loadNovedades();}
+  else toast(res.error||"Error","err");
+}
+async function loadNovedades(){
+  const res=await api("getNovedades",{});
+  const el=document.getElementById("novedades-list");
+  if(!el) return;
+  if(!res.ok||!res.data?.length){el.innerHTML='<div style="color:var(--muted);font-size:13px">Sin novedades</div>';return;}
+  el.innerHTML=res.data.map(n=>`<div class="novedad-item"><div class="novedad-meta">${n.fecha} · ${n.turno} · <span style="color:var(--gold)">${n.usuario}</span></div><div>${n.texto}</div></div>`).join("");
+}
+
+// ── COMPRAS ──────────────────────────────────────────────────
+async function saveCompra(){
+  const d={fecha:document.getElementById("comp-fecha").value,proveedor:document.getElementById("comp-proveedor").value.trim(),concepto:document.getElementById("comp-concepto").value.trim(),monto:parseFloat(document.getElementById("comp-monto").value)||0,tipo:document.getElementById("comp-tipo").value,pagado:document.getElementById("comp-pagado").value};
+  if(!d.proveedor||!d.monto){toast("Completá proveedor y monto","err");return;}
+  const res=await api("saveCompra",d);
+  if(res.ok){toast("Compra guardada ✓","ok");loadCompras();}
+  else toast(res.error||"Error","err");
+}
+async function loadCompras(){
+  const res=await api("getCompras");
+  const wrap=document.getElementById("compras-table-wrap");
+  if(!wrap) return;
+  const rows=res.data||[];
+  const blanco=rows.filter(r=>r.tipo==="blanco").reduce((s,r)=>s+(r.monto||0),0);
+  const acum=document.getElementById("comp-acum-blanco"); if(acum)acum.textContent=fmt(blanco);
+  if(!rows.length){wrap.innerHTML='<div style="color:var(--muted);font-size:13px">Sin compras</div>';return;}
+  wrap.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Monto</th><th>Tipo</th><th>Estado</th></tr></thead>
+    <tbody>${rows.slice().reverse().map(r=>`<tr>
+      <td>${r.fecha}</td><td>${r.proveedor}</td><td>${r.concepto||"—"}</td>
+      <td style="font-family:var(--font-mono)">${fmt(r.monto)}</td>
+      <td><span class="badge ${r.tipo==="blanco"?"badge-blue":"badge-gold"}">${r.tipo}</span></td>
+      <td><span class="badge ${r.pagado==="Si"?"badge-green":"badge-red"}">${r.pagado==="Si"?"Pagado":"Pendiente"}</span></td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ── PROVEEDORES BIRRA ────────────────────────────────────────
+async function saveProveedorBirra(){
+  const nombre=document.getElementById("pb-nombre").value.trim();
+  if(!nombre){toast("Ingresá el nombre","err");return;}
+  const res=await api("saveProveedorBirra",{nombre,contacto:document.getElementById("pb-contacto").value.trim()});
+  if(res.ok){toast("Proveedor agregado ✓","ok");document.getElementById("pb-nombre").value="";loadProveedoresBirra();}
+  else toast(res.error||"Error","err");
+}
+async function loadProveedoresBirra(){
+  const res=await api("getProveedoresBirra");
+  const list=document.getElementById("prov-birra-list");
+  const sel=document.getElementById("ped-proveedor");
+  const provs=res.data||[];
+  if(list){
+    list.innerHTML=provs.length?`<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Contacto</th></tr></thead><tbody>${provs.map(p=>`<tr><td>${p.nombre}</td><td style="color:var(--muted2)">${p.contacto||"—"}</td></tr>`).join("")}</tbody></table></div>`:'<div style="color:var(--muted);font-size:13px">Sin proveedores</div>';
+  }
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Seleccioná...</option>'+provs.map(p=>`<option value="${p.nombre}">${p.nombre}</option>`).join("");
+    if(cur) sel.value=cur;
+  }
+}
+async function savePedidoBirra(){
+  const d={fecha:document.getElementById("ped-fecha").value,proveedor:document.getElementById("ped-proveedor").value,concepto:document.getElementById("ped-concepto").value.trim(),monto_total:parseFloat(document.getElementById("ped-monto").value)||0};
+  if(!d.proveedor||!d.monto_total){toast("Completá proveedor y monto","err");return;}
+  const res=await api("savePedidoBirra",d);
+  if(res.ok){toast("Pedido registrado ✓","ok");loadPedidosBirra();}
+  else toast(res.error||"Error","err");
+}
+async function loadPedidosBirra(){
+  const res=await api("getPedidosBirra");
+  const list=document.getElementById("pedidos-birra-list");
+  if(!list) return;
+  const rows=res.data||[];
+  const totalPend=rows.filter(r=>r.estado==="Pendiente").reduce((s,r)=>s+(r.saldo||0),0);
+  if(!rows.length){list.innerHTML='<div style="color:var(--muted);font-size:13px">Sin pedidos</div>';return;}
+  list.innerHTML=`<div style="margin-bottom:12px;padding:10px 14px;background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.2);border-radius:8px;font-size:13px">Total deuda birra pendiente: <span style="font-family:var(--font-mono);color:var(--red);font-weight:600">${fmt(totalPend)}</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td>${r.fecha}</td><td>${r.proveedor}</td><td>${r.concepto||"—"}</td>
+      <td style="font-family:var(--font-mono)">${fmt(r.monto_total)}</td>
+      <td style="font-family:var(--font-mono);color:var(--green)">${fmt(r.pagado)}</td>
+      <td style="font-family:var(--font-mono);color:${r.saldo>0?"var(--red)":"var(--green)"}">${fmt(r.saldo)}</td>
+      <td><span class="badge ${r.estado==="Pagado"?"badge-green":"badge-red"}">${r.estado}</span></td>
+      <td>${r.estado==="Pendiente"?`<button class="btn btn-ghost btn-sm" onclick="abrirPagoBirra('${r.id}')">+ Pago</button>`:""}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+function abrirPagoBirra(id){
+  document.getElementById("pago-birra-pedido-id").value=id;
+  document.getElementById("pago-birra-fecha").value=today();
+  document.getElementById("pago-birra-form").style.display="block";
+  document.getElementById("pago-birra-form").scrollIntoView({behavior:"smooth"});
+}
+async function savePagoBirra(){
+  const d={pedido_id:document.getElementById("pago-birra-pedido-id").value,fecha:document.getElementById("pago-birra-fecha").value,monto:parseFloat(document.getElementById("pago-birra-monto").value)||0,notas:document.getElementById("pago-birra-notas").value};
+  if(!d.monto){toast("Ingresá el monto","err");return;}
+  const res=await api("savePagoBirra",d);
+  if(res.ok){toast("Pago registrado ✓","ok");document.getElementById("pago-birra-form").style.display="none";loadPedidosBirra();}
+  else toast(res.error||"Error","err");
+}
+
+// ── DEUDAS ───────────────────────────────────────────────────
+async function saveProveedor(){
+  const nombre=document.getElementById("dp-nombre").value.trim();
+  if(!nombre){toast("Ingresá el nombre","err");return;}
+  const res=await api("saveProveedor",{nombre,contacto:document.getElementById("dp-contacto").value.trim()});
+  if(res.ok){toast("Proveedor agregado ✓","ok");document.getElementById("dp-nombre").value="";loadProveedores();}
+  else toast(res.error||"Error","err");
+}
+async function loadProveedores(){
+  const res=await api("getProveedores");
+  const sel=document.getElementById("deu-proveedor");
+  const provs=res.data||[];
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Seleccioná...</option>'+provs.map(p=>`<option value="${p.nombre}">${p.nombre}</option>`).join("");
+    if(cur) sel.value=cur;
+  }
+}
+async function saveDeuda(){
+  const d={fecha:document.getElementById("deu-fecha").value,proveedor:document.getElementById("deu-proveedor").value,concepto:document.getElementById("deu-concepto").value.trim(),monto_total:parseFloat(document.getElementById("deu-monto").value)||0};
+  if(!d.proveedor||!d.monto_total){toast("Completá proveedor y monto","err");return;}
+  const res=await api("saveDeuda",d);
+  if(res.ok){toast("Deuda registrada ✓","ok");loadDeudas();}
+  else toast(res.error||"Error","err");
+}
+async function loadDeudas(){
+  const res=await api("getDeudas");
+  const list=document.getElementById("deudas-list");
+  const tot=document.getElementById("deuda-total");
+  if(tot) tot.textContent=fmt(res.total_pendiente||0);
+  if(!list) return;
+  const rows=res.data||[];
+  if(!rows.length){list.innerHTML='<div style="color:var(--muted);font-size:13px">Sin deudas</div>';return;}
+  list.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td>${r.fecha}</td><td>${r.proveedor}</td><td>${r.concepto||"—"}</td>
+      <td style="font-family:var(--font-mono)">${fmt(r.monto_total)}</td>
+      <td style="font-family:var(--font-mono);color:var(--green)">${fmt(r.pagado)}</td>
+      <td style="font-family:var(--font-mono);color:${r.saldo>0?"var(--red)":"var(--green)"}">${fmt(r.saldo)}</td>
+      <td><span class="badge ${r.estado==="Pagado"?"badge-green":"badge-red"}">${r.estado}</span></td>
+      <td>${r.estado==="Pendiente"?`<button class="btn btn-ghost btn-sm" onclick="abrirPagoDeuda('${r.id}')">+ Pago</button>`:""}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+}
+function abrirPagoDeuda(id){
+  document.getElementById("pago-deuda-id").value=id;
+  document.getElementById("pago-deuda-fecha").value=today();
+  document.getElementById("pago-deuda-form").style.display="block";
+  document.getElementById("pago-deuda-form").scrollIntoView({behavior:"smooth"});
+}
+async function savePagoDeuda(){
+  const d={deuda_id:document.getElementById("pago-deuda-id").value,fecha:document.getElementById("pago-deuda-fecha").value,monto:parseFloat(document.getElementById("pago-deuda-monto").value)||0,notas:document.getElementById("pago-deuda-notas").value};
+  if(!d.monto){toast("Ingresá el monto","err");return;}
+  const res=await api("savePagoDeuda",d);
+  if(res.ok){toast("Pago registrado ✓","ok");document.getElementById("pago-deuda-form").style.display="none";loadDeudas();}
+  else toast(res.error||"Error","err");
+}
+
+// ── BIRRA STOCK ──────────────────────────────────────────────
+const ESTILOS_BIRRA=["Golden","Scottish Ale","P","Cream Ale","BBA","AAA","R_IPA","PILSEN LAGER","A_IPA","HONEY","Frambuesa","Neipa","Stout","PEAKY BLINDERS","Saison"];
+
+function initBirraForm(){
+  const wrap=document.getElementById("birra-form-estilos");
+  if(!wrap||wrap.children.length) return;
+  wrap.innerHTML=ESTILOS_BIRRA.map(e=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text)">${e}</div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1;margin:0"><label>Chopera (L)</label><input type="number" id="birra-${e.replace(/\s/g,'_')}" placeholder="0" min="0" step="0.5" style="text-align:center;width:100%" oninput="updateBirraColor(this)"></div>
+        <div class="field" style="flex:1;margin:0"><label>Backup (u)</label><input type="number" id="backup-${e.replace(/\s/g,'_')}" placeholder="0" min="0" style="text-align:center;width:100%"></div>
+      </div>
+    </div>`).join("");
+}
+
+function updateBirraColor(el){
+  const v=parseFloat(el.value)||0;
+  el.style.borderColor=v===0?"var(--red)":v<10?"#f0a030":"var(--border2)";
+  el.style.color=v===0?"var(--red)":v<10?"#f0a030":"var(--text)";
+}
+
+async function loadBirraStock(){
+  const res=await api("getUltimoBirra");
+  const el=document.getElementById("birra-ultimo");
+  if(!el) return;
+  if(!res.ok||!res.data?.length){el.innerHTML='<div style="color:var(--muted);font-size:13px">Sin stock registrado</div>';return;}
+  // Pre-fill form with last stock
+  res.data.forEach(r=>{
+    const inp=document.getElementById("birra-"+r.estilo.replace(/\s/g,"_"));
+    const bck=document.getElementById("backup-"+r.estilo.replace(/\s/g,"_"));
+    if(inp){inp.value=r.litros;updateBirraColor(inp);}
+    if(bck) bck.value=r.backup;
+  });
+  el.innerHTML=res.data.map(r=>{
+    const color=r.litros===0?"var(--red)":r.litros<10?"#f0a030":r.litros<20?"#e8bc55":"var(--green)";
+    const icon=r.litros===0?"🔴":r.litros<10?"🟡":r.litros<20?"🟠":"🟢";
+    return `<div style="background:var(--surface);border:1px solid ${r.litros<20?color:"var(--border)"};border-radius:10px;padding:12px 16px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase">${r.estilo}</div>
+      <div style="font-family:var(--font-mono);font-size:20px;color:${color};margin-top:4px">${r.litros}L ${icon}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px">Backup: <span style="color:var(--text);font-weight:600">${r.backup||0}u</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${res.fecha}</div>
+    </div>`;
+  }).join("");
+}
+
+async function saveBirra(){
+  const fecha=document.getElementById("birra-fecha").value;
+  if(!fecha){toast("Seleccioná la fecha","err");return;}
+  const estilos=ESTILOS_BIRRA.map(e=>({estilo:e,litros:parseFloat(document.getElementById("birra-"+e.replace(/\s/g,"_"))?.value)||0,backup:parseInt(document.getElementById("backup-"+e.replace(/\s/g,"_"))?.value)||0}));
+  const res=await api("saveBirra",{fecha,estilos});
+  if(res.ok){toast("Stock guardado ✓","ok");loadBirraStock();}
+  else toast(res.error||"Error","err");
+}
+
+// ── SALDOS ───────────────────────────────────────────────────
+async function loadSaldos(){
+  const mes=document.getElementById("saldos-mes")?.value||thisMonth();
+  const res=await api("getSaldos",{mes});
+  const rows=res.data||[];
+  if(!rows.length) return;
+  const last=rows[rows.length-1];
+  ["esteban","federico","guillermo","walter"].forEach(n=>{
+    const v=last[n]||0;
+    const el=document.getElementById("sc-"+n);
+    if(el){el.textContent=fmt(v);el.className="saldo-val "+(v>=0?"pos":"neg");}
+  });
+  // Table
+  const tEl=document.getElementById("saldos-table");
+  if(tEl) tEl.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Esteban</th><th>Federico</th><th>Guillermo</th><th>Walter</th></tr></thead>
+    <tbody>${rows.slice().reverse().map(r=>`<tr>
+      <td>${r.fecha}</td>
+      ${["esteban","federico","guillermo","walter"].map(n=>`<td style="font-family:var(--font-mono);color:${(r[n]||0)>=0?"var(--green)":"var(--red)"}">${fmt(r[n])}</td>`).join("")}
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+  // Chart
+  setTimeout(()=>renderSaldosChart(rows),100);
+}
+
+// ── EMPLEADOS ────────────────────────────────────────────────
+async function saveEmpleado(){
+  const nombre=document.getElementById("emp-nombre").value.trim();
+  if(!nombre){toast("Ingresá el nombre","err");return;}
+  const res=await api("saveEmpleado",{nombre,rol:document.getElementById("emp-rol").value});
+  if(res.ok){toast("Empleado agregado ✓","ok");document.getElementById("emp-nombre").value="";loadEmpleados();}
+  else toast(res.error||"Error","err");
+}
+async function loadEmpleados(){
+  const res=await api("getEmpleados");
+  const el=document.getElementById("emp-list");
+  if(!el) return;
+  const provs=res.data||[];
+  EMPLEADOS_LISTA=provs;
+  el.innerHTML=provs.length?`<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Rol</th></tr></thead><tbody>${provs.map(e=>`<tr><td>${e.nombre}</td><td style="color:var(--muted2)">${e.rol}</td></tr>`).join("")}</tbody></table></div>`:'<div style="color:var(--muted);font-size:13px">Sin empleados</div>';
+}
+
+async function loadHorasEmpleados(){
+  const mes=thisMonth();
+  const res=await api("getTurnos",{mes});
+  const el=document.getElementById("emp-horas-list");
+  if(!el) return;
+  const rows=res.data||[];
+  if(!rows.length){el.innerHTML='<div style="color:var(--muted);font-size:13px">Sin horas registradas este mes</div>';return;}
+  // Group by empleado
+  const map={};
+  rows.forEach(r=>{if(!map[r.empleado])map[r.empleado]=0;map[r.empleado]+=(r.horas||0);});
+  el.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Horas del mes</th></tr></thead><tbody>
+    ${Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([n,h])=>`<tr><td>${n}</td><td style="font-family:var(--font-mono);color:var(--gold)">${h}h</td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+// ── TOAST ────────────────────────────────────────────────────
+function toast(msg,type="ok"){const el=document.getElementById("toast");el.textContent=msg;el.className="show "+type;clearTimeout(el._t);el._t=setTimeout(()=>el.className="",3000);}
+
+// ── INIT ─────────────────────────────────────────────────────
+window.addEventListener("keydown",e=>{if(e.key==="Enter"&&document.getElementById("login-screen").style.display!=="none")doLogin();});
+const saved=localStorage.getItem("prost_session");
+if(saved){try{SESSION=JSON.parse(saved);startApp();}catch(e){localStorage.removeItem("prost_session");}}
+</script>
+</body>
+</html>
