@@ -996,6 +996,12 @@ async function loadDashboard() {
   setT("d-comp-bl", fmt(r.comprasBlanco));
   setT("d-egresos", fmt(r.totalEgresos));
   setT("d-deudas", fmt(r.totalDeudas));
+  // IVA estimado: (factBlanco - comprasBlanco) × 21/121
+  const ivaDebito = Math.round((r.facBlanco||0) * 21/121);
+  const ivaCredito = Math.round((r.comprasBlanco||0) * 21/121);
+  const ivaPagar = ivaDebito - ivaCredito;
+  const ivaEl = document.getElementById("d-iva");
+  if(ivaEl){ ivaEl.textContent = fmt(ivaPagar); ivaEl.style.color = ivaPagar > 0 ? "#9b7fe8" : "var(--green)"; }
   setT("dash-mes-label", "Resumen de "+mes);
 
   // Saldos dueños
